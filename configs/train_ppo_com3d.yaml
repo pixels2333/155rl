@@ -1,0 +1,87 @@
+# =============================================================================
+# Masked Recurrent PPO 训练超参数 —— COM3 对照实验:关闭 combat 塑形
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com3d.yaml --updates 100
+# 背景:COM2 巩固轮(65~85% 胜率)产出的权重在 COM3 上从 17% 提升到 50%(6 局采样评估),
+#       说明"同难度长时间训练会退化"。故 COM3 改为短周期:每轮 150 次更新后重测,
+#       变差就回滚到上一轮权重。
+# 与 com3 的差异:entropy_coef 0.005->0.02、lr 3e-4->2e-4、checkpoint/logging 独立目录
+# 由 src/train/train_ppo.py 载入;网络结构参数同时被 src/agents/ppo_agent.py 使用。
+# =============================================================================
+env:
+  team: 0                     # 受控队伍(0 = 1P)
+  action_repeat: 2            # 每步推进的游戏帧数(30Hz 决策;墙钟吞吐约 30 步/s)
+  round_seconds: 99           # 回合时长(HUD 显示秒数,= 游戏原生 99;内部 8910 单位 ≈ 148.5s 墙钟)
+  max_episode_steps: 4700     # 单局最多决策步数(30Hz × 4700 ≈ 157s,略长于回合)
+  difficulty: 2               # 游戏内难度索引(0=EASY/COM1,1=NORMAL/COM2,2=HARD/COM3,3=LUNATIC/COM4)
+                              # 必须与 curriculum.stages[0] 一致;启动后 reset_with_restart 会核对实机 com_difficulty
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096          # motion_id 词表大小(实测 < 4096)
+  motion_embed: 16            # motion embedding 维度
+  team_hidden: 128            # self / opp 编码器输出维度
+  global_hidden: 64           # 全局特征编码维度
+  proj_hidden: 64             # PointNet 每点特征维度
+  fuse_hidden: 256            # 融合层输出 = LSTM 输入维度
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 400        # 第二轮:400 × 1024 步 ≈ 41 万步(约为首轮的 2 倍数据量)
+  n_steps: 1024               # 首轮 512 时 116 局就平台化;翻倍让每次更新跨 ~34s
+  seq_len: 32                 # 截断 BPTT 序列长度(30Hz 下 32 步 = 64 游戏帧 ≈ 1.07s,覆盖完整连段/倒地起身/换人窗口)
+  epochs: 4
+  minibatch_seqs: 8           # 每个 minibatch 的序列数
+  gamma: 0.9995               # 首轮 0.9985 视野仅 22s,而 KO 局普遍 60~90s;0.9995 视野 ~67s
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02          # 第三轮:实测 0.005 时熵 3.02->2.07、胜率 40%->24% 同步下滑;
+                              # 0.01 仍压不住(45 次更新内 2.07->1.85);提到 0.02 维持探索
+  max_grad_norm: 0.5
+  lr: 2.0e-4                  # 第三轮下调:同一条数据上 3e-4 连续出现胜率下滑
+  lr_anneal: true             # 线性退火到 lr × lr_final_scale(本轮已实现,之前是空配置)
+  lr_final_scale: 0.33
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3d
+  save_every: 10              # 每 N 次更新保存一次
+  keep: 5
+
+# =============================================================================
+# 课程学习(issue 06):按胜率自动把对手从 COM1 推到 COM5。
+# com_levels 用内部编号 0..4(= 人类口径 COM1..COM5),与游戏 config.difficulty.vs 一致。
+# 晋级只在「当前阶段」的最近 window 局里判定,上一阶段的高胜率不会带着继续晋级。
+# =============================================================================
+curriculum:
+  enabled: true               # COM3 轮次开启:打 COM3 胜率 >= 75% 后自动晋级 COM4/5
+  # restart = 晋级时重启游戏,按 config.difficulty.vs 走标题菜单重进对局(已验证路径,~20-50s/次);
+  # live    = 对局中直接写角色 com_* 字段(未验证,re_notes §10 记录过会崩;
+  #           启用前先跑 scripts/verify_difficulty.py 证明安全)。
+  # restart 模式只能取阶段内第一个难度,混合轮转(COM2/3、COM4/5)需要 live。
+  apply_mode: restart
+  # 晋级时怎么把新难度落到实处:
+  #  title   = 暂停菜单回标题 -> 重进 VS COM(不重启进程,秒级;失败自动回退 restart)
+  #  restart = 直接杀进程重启(~20-50s)
+  difficulty_switch: restart
+  window: 100                 # 统计窗口(局)
+  min_decided: 30             # 当前阶段至少分出这么多胜负才允许晋级
+  stages:
+    - name: com3
+      com_levels: [2]         # HARD(= 人类口径 COM3)
+      promote_win_rate: 0.75  # 打 COM3 胜率 >= 75% 才继续加难度
+      entropy_scale: 1.0
+      # 对照实验:COM3 上 combat 塑形(格挡/打康/确反/连段)实测为负贡献,
+      # 关闭后若不再出现"40 次更新内从 50% 掉到 8%"的退化,则证实塑形在强对手下有害。
+      reward_overrides: { combat_scale: 0.0 }
+    - name: com4_5
+      com_levels: [3, 4]      # COM4/COM5 混合
+      promote_win_rate: null  # 最终阶段,不再晋级
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }   # 高阶博弈里距离引导会误导,退火到 0
+
+logging:
+  tensorboard: runs/th155_ppo_com3d
+  print_every: 1

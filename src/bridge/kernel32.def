@@ -1,0 +1,14 @@
+LIBRARY kernel32.dll
+EXPORTS
+_CreateFileMappingW@24=CreateFileMappingW
+_MapViewOfFile@20=MapViewOfFile
+_GetModuleHandleW@4=GetModuleHandleW
+_CreateThread@24=CreateThread
+_Sleep@4=Sleep
+_GetTickCount@0=GetTickCount
+_VirtualAlloc@16=VirtualAlloc
+_VirtualProtect@16=VirtualProtect
+_FlushInstructionCache@12=FlushInstructionCache
+_GetCurrentProcess@0=GetCurrentProcess
+_ReadProcessMemory@20=ReadProcessMemory
+_VirtualQuery@12=VirtualQuery

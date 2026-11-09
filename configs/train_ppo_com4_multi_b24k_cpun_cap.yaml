@@ -1,0 +1,99 @@
+# =============================================================================
+# 对战 COM4, 第 3 段: 解开"每局都顶格"的防御/擦弹上限(饱和通道 = 没有梯度)。
+# 与 train_ppo_com4_multi_b24k_cpun_lr3e5.yaml 的差异(概念上只有一条: 让防御继续值钱):
+#   w_guard_read 0.03 -> 0.01, guard_read_cap 60 -> 300, guard_round_cap 0.45 -> 0.9
+#   w_graze      0.02 -> 0.006, graze_cap      30 -> 150
+#   每帧单价按比例降低, 上限抬 5 倍, 于是"多防 1 秒"仍有边际收益, 但单局防御总收益天花板
+#   (0.9 + 0.9 = 1.8) 仍低于一场胜利 (terminal 2.5~3.0) 与平局惩罚 (-1.5) 的量级关系。
+# 依据: 训练日志里 guard 分量恒为 +0.450/局、graze 恒为 +0.600/局, COM3/COM4 两条线都是
+#   每局 100% 顶格(gr=60 帧、graze_cap=30 帧) -> 这两个通道对策略完全无区分度;
+#   而 COM4 上"胜局自身残血中位 3057 vs COM3 4110", 短板正是续航/掉血控制。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_multi_b24k_cpun\ppo_001260_freshopt.pt -Log multi_b24k_com4_cpun_r4 -Config configs\train_ppo_com4_multi_b24k_cpun_cap.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.01          # 0.03 -> 0.01 (上限抬 5 倍, 单价按比例降)
+  guard_read_cap: 300         # 60 -> 300
+  guard_round_cap: 0.9        # 0.45 -> 0.9 (仍 < 平局惩罚 1.5)
+  w_graze: 0.006              # 0.02 -> 0.006
+  graze_cap: 150              # 30 -> 150
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300          # 断点 1260 + 300 = end 1560(10 次门控评估)
+  schedule_total_updates: 1560
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 1e-4 -> 3e-5: 换对手后 1e-4 连续下滑
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun
+  print_every: 1

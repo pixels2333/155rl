@@ -1,0 +1,95 @@
+# =============================================================================
+# 对战 COM4, 容量实验(未启动): 网络加宽 fuse_hidden 256 -> 384, lstm_hidden 256 -> 384。
+# 其余与 train_ppo_com4_multi_b24k_cpun_lr3e5.yaml 相同(difficulty 3 / 单阶段 com4 / lr 3e-5 / 6 实例)。
+# 依据: COM4 上 reward 侧可动的通道全部测完且无效果 ——
+#   被康惩罚剂量(0.16/0.32) -> 71.0%/70.0% (COM3), 0.32 时训练窗口还掉;
+#   格挡价值 ×5 -> 67.0% 且 gb 仍 0.04/局;
+#   w_regain ×2 -> 47/47 (COM4, 与 42% 基线无差);
+#   解放 guard/graze 上限 -> 策略立刻再顶满(guard 0.884/0.9, graze 0.864/0.9, 取值数 2~3);
+#   即这些通道都只提供常数偏移。剩下的差异是"实血差"(COM3 +0.643 -> COM4 +0.120), 属于决策质量本身。
+# 加宽属于容量假设; 注意: 断点宽度不同 -> 加载时会走权重迁移路径并丢弃旧 Adam 状态(代码已处理)。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_multi_b24k_cpun\ppo_001260_freshopt.pt -Log multi_b24k_com4_cpun_wide -Config configs\train_ppo_com4_multi_b24k_cpun_wide.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 384            # 256 -> 384 (容量假设)
+  lstm_hidden: 384            # 256 -> 384 (容量假设)
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300          # 断点 1260 + 300 = end 1560(10 次门控评估)
+  schedule_total_updates: 1560
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 1e-4 -> 3e-5: 换对手后 1e-4 连续下滑
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_wide
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_wide
+  print_every: 1

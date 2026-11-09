@@ -1,0 +1,72 @@
+# =============================================================================
+# Masked Recurrent PPO —— 防御强化轮 v2(奖励结构改造后第一轮)
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_defense_v2.yaml
+#       --updates 60 --resume checkpoints/defense_v2_resume1170.pt
+#
+# 依据(docs/train_report_com3_full.md §14):
+#   * 旧设计:有效格挡 0.02 × combat_scale 0.25 = 0.005/次,只有一场胜利(≈1.3)的 1/260;
+#     且格挡与对手格挡同处一个零和分量 —— COM 每帧约 2% 在挡、我方恒为 0,该项每局恒为负。
+#   * 实测格挡只有 0.1 次/局 ⇒ 事件太稀疏,单纯抬权重等于"用 0 乘以更大的数"。
+# 本轮改动(见 configs/env.yaml):
+#   1) 格挡移出 combat,成为独立的非零和 `guard` 分量,权重直接生效(0.05/0.08/0.12);
+#   2) 新增稠密引导 `w_guard_read`(对手出招 + 距离 < 320 + 按住后方向不出招,每步 0.003,封顶 30 步);
+#   3) 单回合防御总收益硬上限 0.12(< 平局惩罚 0.2,死防仍然亏)。
+# 训练靶仍是 COM2:COM3 上续训已被证明会在 12 次更新内把权重打坏(§11.1)。
+# lr 用 6e-5:起点 86.7% 是一个局部峰,奖励函数刚换,步长过大会直接把已有行为冲掉。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 1               # COM2
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 60
+  n_steps: 2048
+  seq_len: 32
+  epochs: 4
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02
+  max_grad_norm: 0.5
+  lr: 6.0e-5
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/defense_v2
+  save_every: 10
+  keep: 6
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com2
+      com_levels: [1]
+      promote_win_rate: null      # 永不晋级:晋级到 COM3 会打坏权重
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_defense_v2
+  print_every: 1

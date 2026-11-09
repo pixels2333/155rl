@@ -1,0 +1,100 @@
+# =============================================================================
+# 多实例(4 个游戏进程并行)+ 帧锁步。与 train_ppo_com3_motionfix.yaml 的差异只有:
+#   env.lockstep / lockstep_timeout_ms、train.num_envs、checkpoint/tensorboard 目录。
+# n_steps 是每个 env 的步数:4 × 1024 = 4096,与单实例批次等大。
+# 用法: python -m train.train_ppo --config configs/train_ppo_com3_multi.yaml --resume checkpoints/com3_60hz_coldstart/best.pt
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+  lockstep: true              # 每帧边界阻塞游戏等策略放行:多实例抢 CPU 时也不丢帧
+  # 0 = 无限等待。worker 空闲(等其它 worker/学习者 update)时游戏必须停住:
+  # 100ms 超时会让游戏自由运行,COM3 打空闲的 1P 两回合 → 比赛结束 → reset 失败重启实例。
+  # 实测锁步挂起 240s:进程存活、窗口不判 hung、放行后照常推进(看门狗只在主循环里自检)。
+  lockstep_timeout_ms: 0
+  # 帧间隔补丁(微秒):原版 16666(60fps)。锁步下每帧都由策略放行,period 只限制每帧最少
+  # 耗时;降到 4166 后实测 KO->下一回合 reset 11.5s -> 3.6s,战斗 93~181 步/秒。逐帧语义与
+  # 60fps 相同(一次循环 = 一逻辑帧),菜单/演出不锁步,按约 1e6/period_us fps 自由运行,
+  # 整局墙钟同比缩短。reset 全程锁步,开局第一帧起即受策略控制(1x/4x 实测 count 漂移均为 0)。
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 4
+  total_updates: 1200
+  schedule_total_updates: 1200
+  n_steps: 1024               # 每个 env;合计 4096
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com3_multi
+  save_every: 10
+  keep: 5
+
+eval:
+  interval: 25
+  episodes: 100               # 4 实例并行,100 局 CI 约 ±9pp
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com3_multi
+  print_every: 1

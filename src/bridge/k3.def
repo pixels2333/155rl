@@ -1,0 +1,4 @@
+LIBRARY kernel32.dll
+IMPORTS
+    _CreateFileMappingW@24 = kernel32.CreateFileMappingW
+    _Sleep@4 = kernel32.Sleep

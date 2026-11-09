@@ -1,0 +1,82 @@
+# =============================================================================
+# Masked Recurrent PPO 训练超参数 —— COM3 P0 修复后重返轮
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com3_p0fix.yaml --updates 60
+#       --resume checkpoints/com3_p0fix_resume1140.pt
+# 起点:COM2 P0 验证轮终点 ppo_001140(COM2 75.8%,COM3 采样评估 8/20=40%)。
+# 上一轮结论(docs/train_report_com3_full.md §8):P0 修复把 COM2 从 H 轮 67.8% 提到 75.8%,
+# 但 COM3 采样评估 40% vs 基线 41%(Fisher p≈1.0)——COM2 的能力不再传导到 COM3,
+# 说明瓶颈不在"巩固不足",而在 COM3 分布本身。
+# 本轮问题:**修复 GAE 边界 bug 与优势归一化后,直接在 COM3 上续训能否突破 33% 的平台?**
+#   - 对照 I 轮(com3e,2048,修复前):训练 33.3% 稳、评估 4/10。
+#   - 若本轮训练胜率明显高于 33% 且不崩,则证明此前"COM3 练不上去"至少部分是 GAE 缺陷造成的。
+# 超参与 I 轮完全一致(只差 P0 修复 + 起点权重),保持干净对照。
+# 注意:resume 权重已剥离 curriculum(COM2 阶段 62 局 75.8% 的历史会把课程标签带歪),
+# 本轮课程序列从 stage0=com3 重新计数;checkpoint 编号延续 1141 -> 1200,目录独立。
+# 由 src/train/train_ppo.py 载入;网络结构参数同时被 src/agents/ppo_agent.py 使用。
+# =============================================================================
+env:
+  team: 0                     # 受控队伍(0 = 1P)
+  action_repeat: 2            # 每步推进的游戏帧数(30Hz 决策;墙钟吞吐约 30 步/s)
+  round_seconds: 99           # 回合时长(HUD 显示秒数,= 游戏原生 99;内部 8910 单位 ≈ 148.5s 墙钟)
+  max_episode_steps: 4700     # 单局最多决策步数(30Hz × 4700 ≈ 157s,略长于回合)
+  difficulty: 2               # COM3(HARD);启动后 reset_with_restart 会核对实机 com_difficulty
+                              # 必须与 curriculum.stages[0] 一致
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096          # motion_id 词表大小(实测 < 4096)
+  motion_embed: 16            # motion embedding 维度
+  team_hidden: 128            # self / opp 编码器输出维度
+  global_hidden: 64           # 全局特征编码维度
+  proj_hidden: 64             # PointNet 每点特征维度
+  fuse_hidden: 256            # 融合层输出 → LSTM 输入维度
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 60         # 60 × 2048 步 ≈ 12 万步,与 I 轮同量对照
+  n_steps: 2048               # 单次更新覆盖约 1.2 局(COM3 单局 ~1800 步),保证每批至少一个完整终局
+  seq_len: 32                 # 截断 BPTT 序列长度(30Hz 下 32 步 ≈ 1.07s);遇 done 截断,不跨局
+  epochs: 4
+  minibatch_seqs: 8           # 每个 minibatch 的序列数
+  gamma: 0.9995               # 视野 ~67s,覆盖 COM3 常见的 60~90s 对局
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02          # 实测 0.005 时熵 3.02->2.07 且胜率同步下滑;0.02 维持探索
+  max_grad_norm: 0.5
+  lr: 2.0e-4
+  lr_anneal: true             # 线性退火到 lr × lr_final_scale
+  lr_final_scale: 0.33
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_p0fix
+  save_every: 10              # 每 N 次更新保存一次
+  keep: 5
+
+# =============================================================================
+# 课程学习:本轮从 COM3 起步,达标后晋级 COM4/5。
+# com_levels 用内部编号 0..4(= 人类口径 COM1..COM5),与游戏 config.difficulty.vs 一致。
+# =============================================================================
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100                 # 统计窗口(局)
+  min_decided: 30             # 当前阶段至少分出这么多胜负才允许晋级
+  stages:
+    - name: com3
+      com_levels: [2]         # HARD(= 人类口径 COM3)
+      promote_win_rate: 0.75  # 打 COM3 胜率 >= 75% 才晋级 COM4/5(升三档必先过这关)
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]      # COM4/COM5 混合
+      promote_win_rate: null  # 最终阶段,不再晋级
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }   # 高阶博弈里距离引导会误导,退火到 0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_p0fix
+  print_every: 1

@@ -1,0 +1,79 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM3 防御轮(新奖励下的第一次 COM3 训练)
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com3_defense.yaml
+#       --updates 45 --resume checkpoints/com3_defense_resume1170.pt
+#
+# 动机:
+#   * 用户观察:COM2 攻击欲望低 ⇒ 防御在 COM2 上回报低,不是策略学不会,而是"不值得学"。
+#     COM3 攻击欲望强(实测对手 2.3% 的帧处于格挡、出招帧占比明显更高),防御在那里才有回报。
+#   * 之前"COM3 训练有害"的证据并不硬:那一轮用的是**旧奖励**(格挡有效值 0.005、且零和倒扣),
+#     防御不可学;"COM2 胜率 86.7%→62.8%" 证明的是分布迁移(专门化到 COM3),不等于变弱;
+#     M 轮 COM3 评估 30%(40 局) vs 基线 38%,差值区间跨 0,不显著。
+#
+# 与过去 COM3 轮次的差异(全部为了压制震荡,而不是靠运气):
+#   1. lr 3e-5(过去 2e-4 / 8.7e-5):COM3 局胜率只有 ~30%,梯度方差大,大步长会把已有行为打散;
+#   2. epochs 2(过去 4):同一批数据少过几遍,减少 off-policy 漂移;
+#   3. 新奖励:guard 为独立非零和分量(0.05/0.08/0.12)+ 稠密防御姿态引导(0.02/步,单回合上限 0.45);
+#   4. 起点 com2_push/ppo_001170(COM2 86.7% / COM3 38%)。
+#
+# 判据(提前约定,避免事后找理由):
+#   * 主指标:50 局 COM3 采样评估,与 runs/eval/baseline100 做 --compare,区间不含 0 才算赢;
+#   * 过程指标:`gb`(格挡)要从 0.1 次/局明显上升;`gr`(防御姿态步)要上升;
+#   * 保护区:COM2 窗口胜率跌破 50% 视为崩坏,立即停止并回滚到起点权重。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 2               # COM3:攻击欲望强,防御在这里才有回报
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 45
+  n_steps: 2048
+  seq_len: 32
+  epochs: 2                   # 4 -> 2:COM3 梯度方差大,少过几遍减少漂移
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 8.7e-5 -> 3e-5
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_defense_r2
+  save_every: 5
+  keep: 8
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null      # 不自动晋级,也不跑掉到别处
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_defense_r2
+  print_every: 1

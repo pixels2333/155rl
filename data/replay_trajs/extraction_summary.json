@@ -1,0 +1,1819 @@
+{
+  "targets": "train:batch_1,train:batch_2,train:batch_3,train:batch_4,val,test",
+  "action_repeat": 2,
+  "period_us": 1500,
+  "workers": 4,
+  "wall_elapsed_sec": 854.07,
+  "total_perspectives": 128,
+  "total_steps": 848056,
+  "total_rounds": 306,
+  "overall_bc_valid_rate": 0.969798,
+  "groups": {
+    "test": {
+      "n_perspectives": 20,
+      "total_steps": 135969,
+      "mean_steps": 6798.4,
+      "min_steps": 3674,
+      "max_steps": 11402,
+      "total_rounds": 48,
+      "bc_valid_rate": 0.969773,
+      "reward_sum_mean": 1.5623,
+      "reward_sum_std": 7.0791,
+      "reward_sum_min": -8.7391,
+      "reward_sum_max": 11.4151
+    },
+    "train/batch_1": {
+      "n_perspectives": 22,
+      "total_steps": 150996,
+      "mean_steps": 6863.5,
+      "min_steps": 3624,
+      "max_steps": 9852,
+      "total_rounds": 52,
+      "bc_valid_rate": 0.966827,
+      "reward_sum_mean": 1.9474,
+      "reward_sum_std": 6.9517,
+      "reward_sum_min": -7.9131,
+      "reward_sum_max": 14.603
+    },
+    "train/batch_2": {
+      "n_perspectives": 22,
+      "total_steps": 138373,
+      "mean_steps": 6289.7,
+      "min_steps": 3320,
+      "max_steps": 10361,
+      "total_rounds": 52,
+      "bc_valid_rate": 0.956249,
+      "reward_sum_mean": 2.837,
+      "reward_sum_std": 7.2511,
+      "reward_sum_min": -7.8652,
+      "reward_sum_max": 12.7642
+    },
+    "train/batch_3": {
+      "n_perspectives": 22,
+      "total_steps": 163775,
+      "mean_steps": 7444.3,
+      "min_steps": 2570,
+      "max_steps": 13211,
+      "total_rounds": 56,
+      "bc_valid_rate": 0.980424,
+      "reward_sum_mean": 1.631,
+      "reward_sum_std": 7.6067,
+      "reward_sum_min": -11.8682,
+      "reward_sum_max": 11.7455
+    },
+    "train/batch_4": {
+      "n_perspectives": 22,
+      "total_steps": 132432,
+      "mean_steps": 6019.6,
+      "min_steps": 2560,
+      "max_steps": 10974,
+      "total_rounds": 51,
+      "bc_valid_rate": 0.97777,
+      "reward_sum_mean": 2.9904,
+      "reward_sum_std": 7.5252,
+      "reward_sum_min": -7.92,
+      "reward_sum_max": 13.8903
+    },
+    "val": {
+      "n_perspectives": 20,
+      "total_steps": 126511,
+      "mean_steps": 6325.6,
+      "min_steps": 3927,
+      "max_steps": 10791,
+      "total_rounds": 47,
+      "bc_valid_rate": 0.96609,
+      "reward_sum_mean": 4.4575,
+      "reward_sum_std": 7.493,
+      "reward_sum_min": -10.7779,
+      "reward_sum_max": 12.9249
+    }
+  },
+  "perspectives": {
+    "train/batch_1": [
+      {
+        "file": "250103/replay_212807.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250103_replay_212807_t0.npz",
+        "steps": 5587,
+        "rounds": 2,
+        "bc_valid_rate": 0.961697,
+        "reward_sum": 14.603,
+        "terminal_rewards": [
+          2.9639,
+          2.9336
+        ]
+      },
+      {
+        "file": "250113/replay_223004.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250113_replay_223004_t1.npz",
+        "steps": 7016,
+        "rounds": 2,
+        "bc_valid_rate": 0.948119,
+        "reward_sum": 12.7092,
+        "terminal_rewards": [
+          2.9549,
+          3.0018
+        ]
+      },
+      {
+        "file": "250116/replay_212620.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250116_replay_212620_t1.npz",
+        "steps": 6475,
+        "rounds": 2,
+        "bc_valid_rate": 0.970193,
+        "reward_sum": 9.8284,
+        "terminal_rewards": [
+          2.7361,
+          2.9539
+        ]
+      },
+      {
+        "file": "250119/replay_195309.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250119_replay_195309_t1.npz",
+        "steps": 5744,
+        "rounds": 2,
+        "bc_valid_rate": 0.973538,
+        "reward_sum": -3.7934,
+        "terminal_rewards": [
+          -2.8547,
+          -2.8737
+        ]
+      },
+      {
+        "file": "250123/replay_130129.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_130129_t1.npz",
+        "steps": 5339,
+        "rounds": 2,
+        "bc_valid_rate": 0.990635,
+        "reward_sum": -4.6358,
+        "terminal_rewards": [
+          -2.7167,
+          -2.9763
+        ]
+      },
+      {
+        "file": "250123/replay_130508.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_130508_t1.npz",
+        "steps": 5433,
+        "rounds": 2,
+        "bc_valid_rate": 0.973127,
+        "reward_sum": -4.4742,
+        "terminal_rewards": [
+          -3.0117,
+          -2.7574
+        ]
+      },
+      {
+        "file": "250123/replay_131046.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_131046_t1.npz",
+        "steps": 8738,
+        "rounds": 3,
+        "bc_valid_rate": 0.978027,
+        "reward_sum": -1.345,
+        "terminal_rewards": [
+          2.8377,
+          -2.6787,
+          -3.0405
+        ]
+      },
+      {
+        "file": "250123/replay_131706.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_131706_t0.npz",
+        "steps": 9852,
+        "rounds": 3,
+        "bc_valid_rate": 0.971681,
+        "reward_sum": 1.9317,
+        "terminal_rewards": [
+          -2.5177,
+          4.2005,
+          -2.7729
+        ]
+      },
+      {
+        "file": "250123/replay_131706.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_131706_t1.npz",
+        "steps": 9852,
+        "rounds": 3,
+        "bc_valid_rate": 0.983557,
+        "reward_sum": 5.137,
+        "terminal_rewards": [
+          1.0177,
+          -3.5996,
+          2.9216
+        ]
+      },
+      {
+        "file": "250123/replay_214141.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_214141_t0.npz",
+        "steps": 5323,
+        "rounds": 2,
+        "bc_valid_rate": 0.982904,
+        "reward_sum": -6.2925,
+        "terminal_rewards": [
+          -2.795,
+          -2.9889
+        ]
+      },
+      {
+        "file": "250123/replay_214413.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_214413_t0.npz",
+        "steps": 3624,
+        "rounds": 2,
+        "bc_valid_rate": 0.987031,
+        "reward_sum": -7.9131,
+        "terminal_rewards": [
+          -2.9836,
+          -3.2048
+        ]
+      },
+      {
+        "file": "250123/replay_214954.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_214954_t0.npz",
+        "steps": 8969,
+        "rounds": 3,
+        "bc_valid_rate": 0.991861,
+        "reward_sum": -3.3391,
+        "terminal_rewards": [
+          -2.7924,
+          3.0127,
+          -3.1635
+        ]
+      },
+      {
+        "file": "250123/replay_215415.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_215415_t0.npz",
+        "steps": 6884,
+        "rounds": 2,
+        "bc_valid_rate": 0.985764,
+        "reward_sum": -6.9267,
+        "terminal_rewards": [
+          -2.8293,
+          -2.9659
+        ]
+      },
+      {
+        "file": "250123/replay_221750.rep",
+        "team": 0,
+        "path": "train\\batch_1\\250123_replay_221750_t0.npz",
+        "steps": 8087,
+        "rounds": 2,
+        "bc_valid_rate": 0.968592,
+        "reward_sum": 9.8118,
+        "terminal_rewards": [
+          2.8776,
+          2.6474
+        ]
+      },
+      {
+        "file": "250123/replay_225540.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_225540_t1.npz",
+        "steps": 8210,
+        "rounds": 3,
+        "bc_valid_rate": 0.987698,
+        "reward_sum": 6.7347,
+        "terminal_rewards": [
+          -2.8362,
+          2.9793,
+          2.8064
+        ]
+      },
+      {
+        "file": "250123/replay_230225.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250123_replay_230225_t1.npz",
+        "steps": 7056,
+        "rounds": 2,
+        "bc_valid_rate": 0.98767,
+        "reward_sum": -3.3502,
+        "terminal_rewards": [
+          -2.7834,
+          -2.626
+        ]
+      },
+      {
+        "file": "250125/replay_213213.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_213213_t1.npz",
+        "steps": 5040,
+        "rounds": 2,
+        "bc_valid_rate": 0.926786,
+        "reward_sum": 9.1658,
+        "terminal_rewards": [
+          2.8685,
+          3.0549
+        ]
+      },
+      {
+        "file": "250125/replay_213702.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_213702_t1.npz",
+        "steps": 7460,
+        "rounds": 3,
+        "bc_valid_rate": 0.920107,
+        "reward_sum": 1.3567,
+        "terminal_rewards": [
+          -2.6844,
+          3.1869,
+          -2.742
+        ]
+      },
+      {
+        "file": "250125/replay_214317.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_214317_t1.npz",
+        "steps": 5519,
+        "rounds": 2,
+        "bc_valid_rate": 0.946005,
+        "reward_sum": 10.7921,
+        "terminal_rewards": [
+          2.8876,
+          3.1573
+        ]
+      },
+      {
+        "file": "250125/replay_214827.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_214827_t1.npz",
+        "steps": 8028,
+        "rounds": 3,
+        "bc_valid_rate": 0.943323,
+        "reward_sum": -0.7283,
+        "terminal_rewards": [
+          -2.8925,
+          3.0476,
+          -2.7609
+        ]
+      },
+      {
+        "file": "250125/replay_215713.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_215713_t1.npz",
+        "steps": 6888,
+        "rounds": 3,
+        "bc_valid_rate": 0.9473,
+        "reward_sum": 7.442,
+        "terminal_rewards": [
+          -2.9141,
+          3.1136,
+          3.0244
+        ]
+      },
+      {
+        "file": "250125/replay_220058.rep",
+        "team": 1,
+        "path": "train\\batch_1\\250125_replay_220058_t1.npz",
+        "steps": 5872,
+        "rounds": 2,
+        "bc_valid_rate": 0.927623,
+        "reward_sum": -3.871,
+        "terminal_rewards": [
+          -2.7494,
+          -2.5796
+        ]
+      }
+    ],
+    "train/batch_2": [
+      {
+        "file": "250125/replay_220550.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_220550_t1.npz",
+        "steps": 7413,
+        "rounds": 3,
+        "bc_valid_rate": 0.945366,
+        "reward_sum": 9.872,
+        "terminal_rewards": [
+          3.168,
+          -2.5925,
+          3.2424
+        ]
+      },
+      {
+        "file": "250125/replay_221220.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_221220_t1.npz",
+        "steps": 10361,
+        "rounds": 3,
+        "bc_valid_rate": 0.943828,
+        "reward_sum": 6.0955,
+        "terminal_rewards": [
+          2.7737,
+          -2.7532,
+          2.7054
+        ]
+      },
+      {
+        "file": "250125/replay_221610.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_221610_t1.npz",
+        "steps": 5996,
+        "rounds": 2,
+        "bc_valid_rate": 0.95497,
+        "reward_sum": 10.1323,
+        "terminal_rewards": [
+          2.7243,
+          3.1946
+        ]
+      },
+      {
+        "file": "250125/replay_222104.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_222104_t1.npz",
+        "steps": 7511,
+        "rounds": 3,
+        "bc_valid_rate": 0.934363,
+        "reward_sum": 7.3806,
+        "terminal_rewards": [
+          -3.1525,
+          2.7215,
+          3.4659
+        ]
+      },
+      {
+        "file": "250125/replay_222728.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_222728_t1.npz",
+        "steps": 10331,
+        "rounds": 3,
+        "bc_valid_rate": 0.938051,
+        "reward_sum": 1.2165,
+        "terminal_rewards": [
+          2.7595,
+          -2.6314,
+          -2.6257
+        ]
+      },
+      {
+        "file": "250125/replay_223009.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_223009_t1.npz",
+        "steps": 3797,
+        "rounds": 2,
+        "bc_valid_rate": 0.94601,
+        "reward_sum": 12.7642,
+        "terminal_rewards": [
+          3.2206,
+          3.3303
+        ]
+      },
+      {
+        "file": "250125/replay_225219.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_225219_t1.npz",
+        "steps": 6546,
+        "rounds": 2,
+        "bc_valid_rate": 0.901925,
+        "reward_sum": -2.5025,
+        "terminal_rewards": [
+          -2.5698,
+          -2.5444
+        ]
+      },
+      {
+        "file": "250125/replay_225514.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250125_replay_225514_t1.npz",
+        "steps": 4376,
+        "rounds": 2,
+        "bc_valid_rate": 0.920475,
+        "reward_sum": -6.1555,
+        "terminal_rewards": [
+          -2.67,
+          -3.0199
+        ]
+      },
+      {
+        "file": "250125/replay_230644.rep",
+        "team": 0,
+        "path": "train\\batch_2\\250125_replay_230644_t0.npz",
+        "steps": 4751,
+        "rounds": 2,
+        "bc_valid_rate": 0.948011,
+        "reward_sum": -5.9246,
+        "terminal_rewards": [
+          -2.8008,
+          -2.9955
+        ]
+      },
+      {
+        "file": "250125/replay_233115.rep",
+        "team": 0,
+        "path": "train\\batch_2\\250125_replay_233115_t0.npz",
+        "steps": 7163,
+        "rounds": 2,
+        "bc_valid_rate": 0.92559,
+        "reward_sum": -3.5405,
+        "terminal_rewards": [
+          -2.6238,
+          -2.729
+        ]
+      },
+      {
+        "file": "250125/replay_233936.rep",
+        "team": 0,
+        "path": "train\\batch_2\\250125_replay_233936_t0.npz",
+        "steps": 5090,
+        "rounds": 2,
+        "bc_valid_rate": 0.946955,
+        "reward_sum": -7.8652,
+        "terminal_rewards": [
+          -2.9537,
+          -3.1309
+        ]
+      },
+      {
+        "file": "250126/replay_003136.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_003136_t1.npz",
+        "steps": 7517,
+        "rounds": 2,
+        "bc_valid_rate": 0.975655,
+        "reward_sum": 10.5945,
+        "terminal_rewards": [
+          2.8596,
+          2.764
+        ]
+      },
+      {
+        "file": "250126/replay_003558.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_003558_t1.npz",
+        "steps": 6566,
+        "rounds": 3,
+        "bc_valid_rate": 0.972738,
+        "reward_sum": 8.729,
+        "terminal_rewards": [
+          2.901,
+          -2.8536,
+          3.4414
+        ]
+      },
+      {
+        "file": "250126/replay_004555.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_004555_t1.npz",
+        "steps": 3320,
+        "rounds": 2,
+        "bc_valid_rate": 0.988855,
+        "reward_sum": 12.0545,
+        "terminal_rewards": [
+          3.3571,
+          3.1214
+        ]
+      },
+      {
+        "file": "250126/replay_005001.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_005001_t1.npz",
+        "steps": 6509,
+        "rounds": 2,
+        "bc_valid_rate": 0.962206,
+        "reward_sum": -4.1417,
+        "terminal_rewards": [
+          -2.6991,
+          -2.6582
+        ]
+      },
+      {
+        "file": "250126/replay_005321.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_005321_t1.npz",
+        "steps": 5078,
+        "rounds": 2,
+        "bc_valid_rate": 0.967901,
+        "reward_sum": 10.6545,
+        "terminal_rewards": [
+          2.9314,
+          2.9942
+        ]
+      },
+      {
+        "file": "250126/replay_005651.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_005651_t1.npz",
+        "steps": 5318,
+        "rounds": 2,
+        "bc_valid_rate": 0.970102,
+        "reward_sum": 10.2843,
+        "terminal_rewards": [
+          2.8381,
+          3.0024
+        ]
+      },
+      {
+        "file": "250126/replay_010104.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_010104_t1.npz",
+        "steps": 6327,
+        "rounds": 3,
+        "bc_valid_rate": 0.954323,
+        "reward_sum": 8.2334,
+        "terminal_rewards": [
+          -2.7562,
+          3.0304,
+          3.2653
+        ]
+      },
+      {
+        "file": "250126/replay_010556.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_010556_t1.npz",
+        "steps": 6985,
+        "rounds": 3,
+        "bc_valid_rate": 0.986256,
+        "reward_sum": -0.4266,
+        "terminal_rewards": [
+          3.0104,
+          -2.9088,
+          -3.1402
+        ]
+      },
+      {
+        "file": "250126/replay_184206.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_184206_t1.npz",
+        "steps": 4824,
+        "rounds": 2,
+        "bc_valid_rate": 0.995439,
+        "reward_sum": -5.3899,
+        "terminal_rewards": [
+          -2.8475,
+          -2.9086
+        ]
+      },
+      {
+        "file": "250126/replay_184447.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_184447_t1.npz",
+        "steps": 4002,
+        "rounds": 2,
+        "bc_valid_rate": 0.996752,
+        "reward_sum": -7.0858,
+        "terminal_rewards": [
+          -2.9632,
+          -3.0388
+        ]
+      },
+      {
+        "file": "250126/replay_185632.rep",
+        "team": 1,
+        "path": "train\\batch_2\\250126_replay_185632_t1.npz",
+        "steps": 8592,
+        "rounds": 3,
+        "bc_valid_rate": 0.996276,
+        "reward_sum": -2.5645,
+        "terminal_rewards": [
+          -2.9221,
+          2.8213,
+          -3.0405
+        ]
+      }
+    ],
+    "train/batch_3": [
+      {
+        "file": "250204/replay_231041.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250204_replay_231041_t0.npz",
+        "steps": 13211,
+        "rounds": 3,
+        "bc_valid_rate": 0.99894,
+        "reward_sum": 8.7442,
+        "terminal_rewards": [
+          1.2278,
+          -2.5407,
+          2.7452
+        ]
+      },
+      {
+        "file": "250205/replay_224450.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250205_replay_224450_t1.npz",
+        "steps": 5193,
+        "rounds": 2,
+        "bc_valid_rate": 0.947622,
+        "reward_sum": -6.3067,
+        "terminal_rewards": [
+          -2.7652,
+          -3.0008
+        ]
+      },
+      {
+        "file": "250205/replay_225013.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250205_replay_225013_t1.npz",
+        "steps": 8451,
+        "rounds": 3,
+        "bc_valid_rate": 0.940717,
+        "reward_sum": 9.5113,
+        "terminal_rewards": [
+          -2.6824,
+          3.5262,
+          2.9884
+        ]
+      },
+      {
+        "file": "250205/replay_230856.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250205_replay_230856_t1.npz",
+        "steps": 11285,
+        "rounds": 3,
+        "bc_valid_rate": 0.979973,
+        "reward_sum": 8.6948,
+        "terminal_rewards": [
+          -2.6528,
+          2.9491,
+          2.8031
+        ]
+      },
+      {
+        "file": "250205/replay_231334.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250205_replay_231334_t1.npz",
+        "steps": 7307,
+        "rounds": 2,
+        "bc_valid_rate": 0.967565,
+        "reward_sum": -4.081,
+        "terminal_rewards": [
+          -2.6908,
+          -2.716
+        ]
+      },
+      {
+        "file": "250205/replay_231835.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250205_replay_231835_t1.npz",
+        "steps": 7756,
+        "rounds": 3,
+        "bc_valid_rate": 0.966993,
+        "reward_sum": 8.5713,
+        "terminal_rewards": [
+          -2.5857,
+          3.1206,
+          2.8447
+        ]
+      },
+      {
+        "file": "250213/replay_235421.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250213_replay_235421_t1.npz",
+        "steps": 2772,
+        "rounds": 2,
+        "bc_valid_rate": 0.986291,
+        "reward_sum": -8.8057,
+        "terminal_rewards": [
+          -3.1567,
+          -3.2989
+        ]
+      },
+      {
+        "file": "250214/replay_000134.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250214_replay_000134_t1.npz",
+        "steps": 11635,
+        "rounds": 3,
+        "bc_valid_rate": 0.987366,
+        "reward_sum": -11.8682,
+        "terminal_rewards": [
+          2.9296,
+          -2.5466,
+          -2.9297
+        ]
+      },
+      {
+        "file": "250214/replay_000724.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250214_replay_000724_t0.npz",
+        "steps": 8983,
+        "rounds": 3,
+        "bc_valid_rate": 0.996772,
+        "reward_sum": -0.8255,
+        "terminal_rewards": [
+          -2.7222,
+          3.6969,
+          -2.9163
+        ]
+      },
+      {
+        "file": "250214/replay_000724.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250214_replay_000724_t1.npz",
+        "steps": 8983,
+        "rounds": 3,
+        "bc_valid_rate": 0.994657,
+        "reward_sum": 4.5151,
+        "terminal_rewards": [
+          2.6947,
+          -3.2411,
+          3.1069
+        ]
+      },
+      {
+        "file": "250214/replay_001241.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250214_replay_001241_t1.npz",
+        "steps": 2570,
+        "rounds": 2,
+        "bc_valid_rate": 0.982879,
+        "reward_sum": -10.3532,
+        "terminal_rewards": [
+          -3.2276,
+          -2.8354
+        ]
+      },
+      {
+        "file": "250214/replay_001446.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250214_replay_001446_t1.npz",
+        "steps": 2689,
+        "rounds": 2,
+        "bc_valid_rate": 0.994794,
+        "reward_sum": -8.8857,
+        "terminal_rewards": [
+          -3.138,
+          -2.986
+        ]
+      },
+      {
+        "file": "250302/replay_003347.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250302_replay_003347_t0.npz",
+        "steps": 6323,
+        "rounds": 2,
+        "bc_valid_rate": 0.976593,
+        "reward_sum": 9.433,
+        "terminal_rewards": [
+          2.9981,
+          2.7792
+        ]
+      },
+      {
+        "file": "250303/replay_015508.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250303_replay_015508_t0.npz",
+        "steps": 9147,
+        "rounds": 3,
+        "bc_valid_rate": 0.963267,
+        "reward_sum": 5.6775,
+        "terminal_rewards": [
+          -2.6974,
+          2.7231,
+          2.7057
+        ]
+      },
+      {
+        "file": "250314/replay_192050.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250314_replay_192050_t1.npz",
+        "steps": 8157,
+        "rounds": 3,
+        "bc_valid_rate": 0.998406,
+        "reward_sum": 3.26,
+        "terminal_rewards": [
+          3.5531,
+          -2.9999,
+          -2.7071
+        ]
+      },
+      {
+        "file": "250327/replay_183134.rep",
+        "team": 1,
+        "path": "train\\batch_3\\250327_replay_183134_t1.npz",
+        "steps": 4636,
+        "rounds": 2,
+        "bc_valid_rate": 0.976488,
+        "reward_sum": 9.8637,
+        "terminal_rewards": [
+          2.806,
+          3.122
+        ]
+      },
+      {
+        "file": "250407/replay_214225.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250407_replay_214225_t0.npz",
+        "steps": 9819,
+        "rounds": 3,
+        "bc_valid_rate": 0.981261,
+        "reward_sum": 6.782,
+        "terminal_rewards": [
+          -2.788,
+          2.9703,
+          1.1144
+        ]
+      },
+      {
+        "file": "250409/replay_205123.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250409_replay_205123_t0.npz",
+        "steps": 6270,
+        "rounds": 2,
+        "bc_valid_rate": 0.976236,
+        "reward_sum": -3.7652,
+        "terminal_rewards": [
+          -2.5654,
+          -2.6469
+        ]
+      },
+      {
+        "file": "250428/replay_170553.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250428_replay_170553_t0.npz",
+        "steps": 5573,
+        "rounds": 2,
+        "bc_valid_rate": 0.983133,
+        "reward_sum": 11.7455,
+        "terminal_rewards": [
+          3.1276,
+          3.1469
+        ]
+      },
+      {
+        "file": "250428/replay_190515.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250428_replay_190515_t0.npz",
+        "steps": 10947,
+        "rounds": 3,
+        "bc_valid_rate": 0.989769,
+        "reward_sum": 2.8671,
+        "terminal_rewards": [
+          3.102,
+          -2.843,
+          -2.5898
+        ]
+      },
+      {
+        "file": "250428/replay_190937.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250428_replay_190937_t0.npz",
+        "steps": 6178,
+        "rounds": 3,
+        "bc_valid_rate": 0.97831,
+        "reward_sum": 7.5307,
+        "terminal_rewards": [
+          2.7499,
+          -2.8055,
+          3.112
+        ]
+      },
+      {
+        "file": "250428/replay_191322.rep",
+        "team": 0,
+        "path": "train\\batch_3\\250428_replay_191322_t0.npz",
+        "steps": 5890,
+        "rounds": 2,
+        "bc_valid_rate": 0.982852,
+        "reward_sum": -6.4231,
+        "terminal_rewards": [
+          -2.8591,
+          -2.8538
+        ]
+      }
+    ],
+    "train/batch_4": [
+      {
+        "file": "250428/replay_191646.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250428_replay_191646_t0.npz",
+        "steps": 5191,
+        "rounds": 2,
+        "bc_valid_rate": 0.960123,
+        "reward_sum": -4.2401,
+        "terminal_rewards": [
+          -2.8114,
+          -2.7299
+        ]
+      },
+      {
+        "file": "250428/replay_192107.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250428_replay_192107_t0.npz",
+        "steps": 6590,
+        "rounds": 3,
+        "bc_valid_rate": 0.97481,
+        "reward_sum": -1.1127,
+        "terminal_rewards": [
+          3.081,
+          -2.8617,
+          -3.0289
+        ]
+      },
+      {
+        "file": "250430/replay_194302.rep",
+        "team": 1,
+        "path": "train\\batch_4\\250430_replay_194302_t1.npz",
+        "steps": 7460,
+        "rounds": 2,
+        "bc_valid_rate": 0.978418,
+        "reward_sum": 9.6967,
+        "terminal_rewards": [
+          2.6893,
+          2.7931
+        ]
+      },
+      {
+        "file": "250430/replay_194755.rep",
+        "team": 1,
+        "path": "train\\batch_4\\250430_replay_194755_t1.npz",
+        "steps": 7460,
+        "rounds": 3,
+        "bc_valid_rate": 0.969839,
+        "reward_sum": 0.8827,
+        "terminal_rewards": [
+          -2.7991,
+          3.208,
+          -2.7679
+        ]
+      },
+      {
+        "file": "250430/replay_195125.rep",
+        "team": 1,
+        "path": "train\\batch_4\\250430_replay_195125_t1.npz",
+        "steps": 5323,
+        "rounds": 2,
+        "bc_valid_rate": 0.960361,
+        "reward_sum": 12.0516,
+        "terminal_rewards": [
+          2.7893,
+          3.2691
+        ]
+      },
+      {
+        "file": "250501/replay_213206.rep",
+        "team": 1,
+        "path": "train\\batch_4\\250501_replay_213206_t1.npz",
+        "steps": 5202,
+        "rounds": 2,
+        "bc_valid_rate": 0.987505,
+        "reward_sum": -5.8111,
+        "terminal_rewards": [
+          -2.6818,
+          -2.8792
+        ]
+      },
+      {
+        "file": "250508/replay_131344.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250508_replay_131344_t0.npz",
+        "steps": 5108,
+        "rounds": 2,
+        "bc_valid_rate": 0.987862,
+        "reward_sum": 11.0991,
+        "terminal_rewards": [
+          2.98,
+          2.9414
+        ]
+      },
+      {
+        "file": "250508/replay_131741.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250508_replay_131741_t0.npz",
+        "steps": 6217,
+        "rounds": 2,
+        "bc_valid_rate": 0.975229,
+        "reward_sum": 10.0226,
+        "terminal_rewards": [
+          2.9205,
+          2.8346
+        ]
+      },
+      {
+        "file": "250708/replay_195659.rep",
+        "team": 1,
+        "path": "train\\batch_4\\250708_replay_195659_t1.npz",
+        "steps": 4721,
+        "rounds": 2,
+        "bc_valid_rate": 0.969074,
+        "reward_sum": 12.9237,
+        "terminal_rewards": [
+          3.4577,
+          3.045
+        ]
+      },
+      {
+        "file": "250720/replay_004048.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250720_replay_004048_t0.npz",
+        "steps": 7742,
+        "rounds": 2,
+        "bc_valid_rate": 0.982563,
+        "reward_sum": 9.4216,
+        "terminal_rewards": [
+          2.9295,
+          1.0751
+        ]
+      },
+      {
+        "file": "250803/replay_024022.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250803_replay_024022_t0.npz",
+        "steps": 5631,
+        "rounds": 2,
+        "bc_valid_rate": 0.96022,
+        "reward_sum": -4.095,
+        "terminal_rewards": [
+          -3.0255,
+          -2.623
+        ]
+      },
+      {
+        "file": "250920/replay_231556.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250920_replay_231556_t0.npz",
+        "steps": 5065,
+        "rounds": 2,
+        "bc_valid_rate": 0.997236,
+        "reward_sum": -6.4704,
+        "terminal_rewards": [
+          -2.7273,
+          -3.0965
+        ]
+      },
+      {
+        "file": "250920/replay_231849.rep",
+        "team": 0,
+        "path": "train\\batch_4\\250920_replay_231849_t0.npz",
+        "steps": 3750,
+        "rounds": 2,
+        "bc_valid_rate": 0.992,
+        "reward_sum": -7.6178,
+        "terminal_rewards": [
+          -3.206,
+          -2.9097
+        ]
+      },
+      {
+        "file": "251003/replay_212824.rep",
+        "team": 1,
+        "path": "train\\batch_4\\251003_replay_212824_t1.npz",
+        "steps": 8805,
+        "rounds": 3,
+        "bc_valid_rate": 0.970698,
+        "reward_sum": 8.5451,
+        "terminal_rewards": [
+          2.8548,
+          -2.8355,
+          2.9815
+        ]
+      },
+      {
+        "file": "251021/replay_235731.rep",
+        "team": 0,
+        "path": "train\\batch_4\\251021_replay_235731_t0.npz",
+        "steps": 7281,
+        "rounds": 3,
+        "bc_valid_rate": 0.971707,
+        "reward_sum": 9.4345,
+        "terminal_rewards": [
+          -2.6672,
+          2.9653,
+          3.0622
+        ]
+      },
+      {
+        "file": "251022/replay_032726.rep",
+        "team": 0,
+        "path": "train\\batch_4\\251022_replay_032726_t0.npz",
+        "steps": 6469,
+        "rounds": 3,
+        "bc_valid_rate": 0.987633,
+        "reward_sum": -2.7614,
+        "terminal_rewards": [
+          3.0832,
+          -2.7065,
+          -3.0152
+        ]
+      },
+      {
+        "file": "251022/replay_032943.rep",
+        "team": 0,
+        "path": "train\\batch_4\\251022_replay_032943_t0.npz",
+        "steps": 3161,
+        "rounds": 2,
+        "bc_valid_rate": 0.992724,
+        "reward_sum": 5.9975,
+        "terminal_rewards": [
+          3.0116,
+          3.1488
+        ]
+      },
+      {
+        "file": "251022/replay_033508.rep",
+        "team": 0,
+        "path": "train\\batch_4\\251022_replay_033508_t0.npz",
+        "steps": 8522,
+        "rounds": 3,
+        "bc_valid_rate": 0.981694,
+        "reward_sum": 2.3732,
+        "terminal_rewards": [
+          -2.7306,
+          2.6584,
+          3.164
+        ]
+      },
+      {
+        "file": "251022/replay_033857.rep",
+        "team": 0,
+        "path": "train\\batch_4\\251022_replay_033857_t0.npz",
+        "steps": 5988,
+        "rounds": 2,
+        "bc_valid_rate": 0.987308,
+        "reward_sum": -7.92,
+        "terminal_rewards": [
+          -2.6339,
+          -2.8935
+        ]
+      },
+      {
+        "file": "251024/replay_104857.rep",
+        "team": 1,
+        "path": "train\\batch_4\\251024_replay_104857_t1.npz",
+        "steps": 3212,
+        "rounds": 2,
+        "bc_valid_rate": 0.986301,
+        "reward_sum": 13.8903,
+        "terminal_rewards": [
+          3.2939,
+          3.4739
+        ]
+      },
+      {
+        "file": "251102/replay_002645.rep",
+        "team": 1,
+        "path": "train\\batch_4\\251102_replay_002645_t1.npz",
+        "steps": 2560,
+        "rounds": 2,
+        "bc_valid_rate": 0.973828,
+        "reward_sum": -6.8325,
+        "terminal_rewards": [
+          -2.9946,
+          -2.9646
+        ]
+      },
+      {
+        "file": "251102/replay_003349.rep",
+        "team": 1,
+        "path": "train\\batch_4\\251102_replay_003349_t1.npz",
+        "steps": 10974,
+        "rounds": 3,
+        "bc_valid_rate": 0.978677,
+        "reward_sum": 6.3112,
+        "terminal_rewards": [
+          1.2276,
+          -2.9682,
+          2.6936
+        ]
+      }
+    ],
+    "val": [
+      {
+        "file": "250125/replay_213943.rep",
+        "team": 1,
+        "path": "val\\250125_replay_213943_t1.npz",
+        "steps": 3927,
+        "rounds": 2,
+        "bc_valid_rate": 0.958238,
+        "reward_sum": 12.7062,
+        "terminal_rewards": [
+          3.1228,
+          3.2961
+        ]
+      },
+      {
+        "file": "250125/replay_224311.rep",
+        "team": 1,
+        "path": "val\\250125_replay_224311_t1.npz",
+        "steps": 7134,
+        "rounds": 3,
+        "bc_valid_rate": 0.91912,
+        "reward_sum": -2.4774,
+        "terminal_rewards": [
+          -2.8458,
+          2.7261,
+          -3.4118
+        ]
+      },
+      {
+        "file": "250125/replay_224810.rep",
+        "team": 1,
+        "path": "val\\250125_replay_224810_t1.npz",
+        "steps": 7768,
+        "rounds": 3,
+        "bc_valid_rate": 0.951596,
+        "reward_sum": 0.1982,
+        "terminal_rewards": [
+          2.8783,
+          -2.6979,
+          -2.6446
+        ]
+      },
+      {
+        "file": "250125/replay_230336.rep",
+        "team": 0,
+        "path": "val\\250125_replay_230336_t0.npz",
+        "steps": 9552,
+        "rounds": 3,
+        "bc_valid_rate": 0.948178,
+        "reward_sum": 6.6076,
+        "terminal_rewards": [
+          -2.8949,
+          2.929,
+          2.8616
+        ]
+      },
+      {
+        "file": "250125/replay_232647.rep",
+        "team": 0,
+        "path": "val\\250125_replay_232647_t0.npz",
+        "steps": 6069,
+        "rounds": 2,
+        "bc_valid_rate": 0.951557,
+        "reward_sum": -4.1957,
+        "terminal_rewards": [
+          -2.6795,
+          -2.7274
+        ]
+      },
+      {
+        "file": "250125/replay_233616.rep",
+        "team": 0,
+        "path": "val\\250125_replay_233616_t0.npz",
+        "steps": 8091,
+        "rounds": 2,
+        "bc_valid_rate": 0.960697,
+        "reward_sum": 8.0808,
+        "terminal_rewards": [
+          1.0096,
+          2.768
+        ]
+      },
+      {
+        "file": "250126/replay_003939.rep",
+        "team": 1,
+        "path": "val\\250126_replay_003939_t1.npz",
+        "steps": 5745,
+        "rounds": 2,
+        "bc_valid_rate": 0.974587,
+        "reward_sum": 10.1361,
+        "terminal_rewards": [
+          1.0363,
+          3.4644
+        ]
+      },
+      {
+        "file": "250126/replay_004335.rep",
+        "team": 1,
+        "path": "val\\250126_replay_004335_t1.npz",
+        "steps": 6143,
+        "rounds": 2,
+        "bc_valid_rate": 0.974117,
+        "reward_sum": 10.6225,
+        "terminal_rewards": [
+          2.8947,
+          2.9724
+        ]
+      },
+      {
+        "file": "250129/replay_025123.rep",
+        "team": 1,
+        "path": "val\\250129_replay_025123_t1.npz",
+        "steps": 4166,
+        "rounds": 2,
+        "bc_valid_rate": 0.970715,
+        "reward_sum": 10.9761,
+        "terminal_rewards": [
+          2.9979,
+          3.3304
+        ]
+      },
+      {
+        "file": "250214/replay_001045.rep",
+        "team": 0,
+        "path": "val\\250214_replay_001045_t0.npz",
+        "steps": 5042,
+        "rounds": 2,
+        "bc_valid_rate": 0.977787,
+        "reward_sum": 12.9249,
+        "terminal_rewards": [
+          3.2115,
+          3.0365
+        ]
+      },
+      {
+        "file": "250214/replay_001045.rep",
+        "team": 1,
+        "path": "val\\250214_replay_001045_t1.npz",
+        "steps": 5042,
+        "rounds": 2,
+        "bc_valid_rate": 0.992067,
+        "reward_sum": -10.7779,
+        "terminal_rewards": [
+          -2.92,
+          -2.8607
+        ]
+      },
+      {
+        "file": "250327/replay_182542.rep",
+        "team": 1,
+        "path": "val\\250327_replay_182542_t1.npz",
+        "steps": 5398,
+        "rounds": 2,
+        "bc_valid_rate": 0.962208,
+        "reward_sum": 9.7236,
+        "terminal_rewards": [
+          3.61,
+          1.0249
+        ]
+      },
+      {
+        "file": "250327/replay_182828.rep",
+        "team": 1,
+        "path": "val\\250327_replay_182828_t1.npz",
+        "steps": 4043,
+        "rounds": 2,
+        "bc_valid_rate": 0.97675,
+        "reward_sum": 12.0484,
+        "terminal_rewards": [
+          3.1885,
+          3.0719
+        ]
+      },
+      {
+        "file": "250331/replay_174923.rep",
+        "team": 1,
+        "path": "val\\250331_replay_174923_t1.npz",
+        "steps": 5429,
+        "rounds": 2,
+        "bc_valid_rate": 0.955425,
+        "reward_sum": 12.7661,
+        "terminal_rewards": [
+          2.9458,
+          3.186
+        ]
+      },
+      {
+        "file": "250511/replay_193404.rep",
+        "team": 1,
+        "path": "val\\250511_replay_193404_t1.npz",
+        "steps": 5854,
+        "rounds": 2,
+        "bc_valid_rate": 0.960369,
+        "reward_sum": -4.8655,
+        "terminal_rewards": [
+          -2.8402,
+          -2.6702
+        ]
+      },
+      {
+        "file": "250511/replay_193820.rep",
+        "team": 1,
+        "path": "val\\250511_replay_193820_t1.npz",
+        "steps": 6491,
+        "rounds": 3,
+        "bc_valid_rate": 0.959482,
+        "reward_sum": 8.7283,
+        "terminal_rewards": [
+          -2.9079,
+          2.9946,
+          3.0349
+        ]
+      },
+      {
+        "file": "250611/replay_165326.rep",
+        "team": 0,
+        "path": "val\\250611_replay_165326_t0.npz",
+        "steps": 6180,
+        "rounds": 3,
+        "bc_valid_rate": 0.980259,
+        "reward_sum": 5.6243,
+        "terminal_rewards": [
+          3.0225,
+          -2.9244,
+          2.9243
+        ]
+      },
+      {
+        "file": "251103/replay_005726.rep",
+        "team": 0,
+        "path": "val\\251103_replay_005726_t0.npz",
+        "steps": 10791,
+        "rounds": 3,
+        "bc_valid_rate": 0.982671,
+        "reward_sum": -0.6357,
+        "terminal_rewards": [
+          2.7343,
+          -2.929,
+          -2.5222
+        ]
+      },
+      {
+        "file": "251103/replay_010336.rep",
+        "team": 0,
+        "path": "val\\251103_replay_010336_t0.npz",
+        "steps": 9554,
+        "rounds": 3,
+        "bc_valid_rate": 0.98744,
+        "reward_sum": -0.5606,
+        "terminal_rewards": [
+          2.8144,
+          -3.0533,
+          -2.5145
+        ]
+      },
+      {
+        "file": "251123/replay_231202.rep",
+        "team": 1,
+        "path": "val\\251123_replay_231202_t1.npz",
+        "steps": 4092,
+        "rounds": 2,
+        "bc_valid_rate": 0.994379,
+        "reward_sum": -8.4811,
+        "terminal_rewards": [
+          -3.1607,
+          -3.6989
+        ]
+      }
+    ],
+    "test": [
+      {
+        "file": "250125/replay_215243.rep",
+        "team": 1,
+        "path": "test\\250125_replay_215243_t1.npz",
+        "steps": 6751,
+        "rounds": 2,
+        "bc_valid_rate": 0.953192,
+        "reward_sum": -4.7705,
+        "terminal_rewards": [
+          -2.8586,
+          -2.5164
+        ]
+      },
+      {
+        "file": "250125/replay_223453.rep",
+        "team": 1,
+        "path": "test\\250125_replay_223453_t1.npz",
+        "steps": 7127,
+        "rounds": 3,
+        "bc_valid_rate": 0.952294,
+        "reward_sum": -0.7347,
+        "terminal_rewards": [
+          -2.9536,
+          3.0827,
+          -2.8552
+        ]
+      },
+      {
+        "file": "250125/replay_223830.rep",
+        "team": 1,
+        "path": "test\\250125_replay_223830_t1.npz",
+        "steps": 5567,
+        "rounds": 2,
+        "bc_valid_rate": 0.948805,
+        "reward_sum": -5.9191,
+        "terminal_rewards": [
+          -2.7801,
+          -2.796
+        ]
+      },
+      {
+        "file": "250125/replay_231333.rep",
+        "team": 0,
+        "path": "test\\250125_replay_231333_t0.npz",
+        "steps": 11024,
+        "rounds": 3,
+        "bc_valid_rate": 0.938498,
+        "reward_sum": -0.162,
+        "terminal_rewards": [
+          -2.8349,
+          2.6694,
+          -2.6838
+        ]
+      },
+      {
+        "file": "250125/replay_231605.rep",
+        "team": 0,
+        "path": "test\\250125_replay_231605_t0.npz",
+        "steps": 3674,
+        "rounds": 2,
+        "bc_valid_rate": 0.960261,
+        "reward_sum": -8.7391,
+        "terminal_rewards": [
+          -3.0079,
+          -3.1726
+        ]
+      },
+      {
+        "file": "250125/replay_232253.rep",
+        "team": 0,
+        "path": "test\\250125_replay_232253_t0.npz",
+        "steps": 10922,
+        "rounds": 3,
+        "bc_valid_rate": 0.952115,
+        "reward_sum": 9.2086,
+        "terminal_rewards": [
+          2.7867,
+          -2.5427,
+          2.8941
+        ]
+      },
+      {
+        "file": "250129/replay_025709.rep",
+        "team": 1,
+        "path": "test\\250129_replay_025709_t1.npz",
+        "steps": 9171,
+        "rounds": 3,
+        "bc_valid_rate": 0.976557,
+        "reward_sum": 10.7312,
+        "terminal_rewards": [
+          3.0504,
+          -2.5022,
+          3.4411
+        ]
+      },
+      {
+        "file": "250129/replay_030112.rep",
+        "team": 1,
+        "path": "test\\250129_replay_030112_t1.npz",
+        "steps": 6268,
+        "rounds": 2,
+        "bc_valid_rate": 0.971602,
+        "reward_sum": 8.7773,
+        "terminal_rewards": [
+          3.1657,
+          1.0488
+        ]
+      },
+      {
+        "file": "250204/replay_225650.rep",
+        "team": 1,
+        "path": "test\\250204_replay_225650_t1.npz",
+        "steps": 3912,
+        "rounds": 2,
+        "bc_valid_rate": 0.985174,
+        "reward_sum": -7.7636,
+        "terminal_rewards": [
+          -2.828,
+          -3.2439
+        ]
+      },
+      {
+        "file": "250404/replay_125631.rep",
+        "team": 0,
+        "path": "test\\250404_replay_125631_t0.npz",
+        "steps": 6232,
+        "rounds": 2,
+        "bc_valid_rate": 0.966463,
+        "reward_sum": -3.819,
+        "terminal_rewards": [
+          -2.7683,
+          -2.555
+        ]
+      },
+      {
+        "file": "250404/replay_130015.rep",
+        "team": 0,
+        "path": "test\\250404_replay_130015_t0.npz",
+        "steps": 5470,
+        "rounds": 3,
+        "bc_valid_rate": 0.981353,
+        "reward_sum": 0.8688,
+        "terminal_rewards": [
+          -2.9415,
+          3.3024,
+          -2.7439
+        ]
+      },
+      {
+        "file": "250404/replay_130319.rep",
+        "team": 0,
+        "path": "test\\250404_replay_130319_t0.npz",
+        "steps": 4672,
+        "rounds": 2,
+        "bc_valid_rate": 0.996147,
+        "reward_sum": 11.1708,
+        "terminal_rewards": [
+          3.328,
+          2.7668
+        ]
+      },
+      {
+        "file": "250611/replay_164346.rep",
+        "team": 0,
+        "path": "test\\250611_replay_164346_t0.npz",
+        "steps": 4153,
+        "rounds": 2,
+        "bc_valid_rate": 0.954009,
+        "reward_sum": 10.7559,
+        "terminal_rewards": [
+          3.3066,
+          3.0291
+        ]
+      },
+      {
+        "file": "250611/replay_164855.rep",
+        "team": 0,
+        "path": "test\\250611_replay_164855_t0.npz",
+        "steps": 6787,
+        "rounds": 3,
+        "bc_valid_rate": 0.971416,
+        "reward_sum": 7.794,
+        "terminal_rewards": [
+          -2.7432,
+          3.4178,
+          2.705
+        ]
+      },
+      {
+        "file": "250611/replay_171707.rep",
+        "team": 0,
+        "path": "test\\250611_replay_171707_t0.npz",
+        "steps": 8566,
+        "rounds": 3,
+        "bc_valid_rate": 0.9735,
+        "reward_sum": 7.4848,
+        "terminal_rewards": [
+          -2.883,
+          3.8583,
+          2.9898
+        ]
+      },
+      {
+        "file": "251123/replay_231538.rep",
+        "team": 1,
+        "path": "test\\251123_replay_231538_t1.npz",
+        "steps": 4881,
+        "rounds": 2,
+        "bc_valid_rate": 0.989142,
+        "reward_sum": -5.5907,
+        "terminal_rewards": [
+          -2.8807,
+          -2.7949
+        ]
+      },
+      {
+        "file": "251123/replay_231909.rep",
+        "team": 0,
+        "path": "test\\251123_replay_231909_t0.npz",
+        "steps": 5245,
+        "rounds": 2,
+        "bc_valid_rate": 0.973499,
+        "reward_sum": 11.4151,
+        "terminal_rewards": [
+          3.1377,
+          3.0726
+        ]
+      },
+      {
+        "file": "251123/replay_231909.rep",
+        "team": 1,
+        "path": "test\\251123_replay_231909_t1.npz",
+        "steps": 5245,
+        "rounds": 2,
+        "bc_valid_rate": 0.989514,
+        "reward_sum": -5.3904,
+        "terminal_rewards": [
+          -2.9252,
+          -2.822
+        ]
+      },
+      {
+        "file": "251123/replay_232447.rep",
+        "team": 1,
+        "path": "test\\251123_replay_232447_t1.npz",
+        "steps": 8900,
+        "rounds": 2,
+        "bc_valid_rate": 0.989663,
+        "reward_sum": -3.9835,
+        "terminal_rewards": [
+          -2.7808,
+          -2.5422
+        ]
+      },
+      {
+        "file": "251123/replay_233158.rep",
+        "team": 1,
+        "path": "test\\251123_replay_233158_t1.npz",
+        "steps": 11402,
+        "rounds": 3,
+        "bc_valid_rate": 0.992019,
+        "reward_sum": -0.0883,
+        "terminal_rewards": [
+          -2.5776,
+          2.6794,
+          -3.0133
+        ]
+      }
+    ]
+  }
+}

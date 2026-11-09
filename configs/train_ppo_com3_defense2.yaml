@@ -1,0 +1,85 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM3 压熵轮(N2)
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com3_defense2.yaml
+#       --updates 60 --resume checkpoints/com3_defense2_resume1190.pt
+#
+# 动机(docs/train_report_com3_full.md §8.11):
+#   * N1(防御奖励 ×4)从 ppo_001140 起训 62 局 = 33.9%(M 轮同起点 28.4%),但 `gb` 仍只有
+#     6 次/62 局 ⇒ **抬权重没能诱发格挡**,防御假设未被证实;
+#   * 训练通篇 `ent=3.5~3.6`,而动作空间是 64 个离散动作(均匀分布熵 = ln64 ≈ 4.16)
+#     ⇒ 策略接近均匀随机,只有 ~15% 的概率质量集中在"它真正想选的动作"上。
+#     COM3 训练 930 次更新也逃不出这个区间,说明熵系数(0.02)让策略始终不敢收敛。
+# 本轮唯一变量 = entropy_coef 0.02 -> 0.012(其余含奖励 overrides、批量、起点全部同 N1)。
+# 同时把 lr 从 2e-4 降到 1.2e-4:续训时 lr 退火会重置到 base,若仍用 2e-4 会产生一次
+# 比上一轮末期(≈6.6e-5)高 3 倍的学习率突跳,足以把 N1 学到的行为冲掉。
+# 判据:采样评估对 COM3 ≥ 45%(基线 40%),且训练胜率高于 N1 的 33.9%。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 60
+  n_steps: 2048
+  seq_len: 32
+  epochs: 4
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.012         # 0.02 -> 0.012:让策略开始收敛(熵仍是最大值的 ~80%)
+  max_grad_norm: 0.5
+  lr: 1.2e-4                  # 续训不重置到 2e-4,避免学习率突跳
+  lr_anneal: true
+  lr_final_scale: 0.5
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_defense2
+  save_every: 10
+  keep: 5
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3_lowent
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+      reward_overrides:          # 与 N1 完全相同,保证单变量
+        w_guard_block: 0.08
+        w_guard_block_baria: 0.10
+        w_guard_block_just: 0.12
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides:
+        w_approach: 0.0
+        w_guard_block: 0.08
+        w_guard_block_baria: 0.10
+        w_guard_block_just: 0.12
+
+logging:
+  tensorboard: runs/th155_ppo_com3_defense2
+  print_every: 1

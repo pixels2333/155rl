@@ -1,0 +1,98 @@
+# =============================================================================
+# 6 实例大批次, lr 1e-4, 被康惩罚加倍 (w_countered_punish 0.16 -> 0.32)。
+# 与 train_ppo_com3_multi_b24k_cpun.yaml 的唯一差异就是这一个数值(单变量继续加剂量)。
+# 依据(cpun 段 1522 局实测): 被康占比 47.5% -> 46.2% 后不再下降, eval 卡在 74~75%
+#   (66/66/67/75/75/74/74); 而同一时期防御通道完全饱和/失效:
+#   guard_read 每局都顶到 cap 60(奖励退化成常数), 真实格挡 guard_block 只有 4.9% 的局出现过(均值 0.05 次),
+#   guard_punish 均值 0.07 —— 即"被康"这一侧惩罚有了, 但正面替代手段(格挡/确反)既学不到也几乎不触发。
+#   先把剂量翻倍确认是"信号强度不足"还是"行为学不动"。
+# 用法: python -m train.train_ppo --config configs/train_ppo_com3_multi_b24k_cpun2.yaml --resume checkpoints/com3_multi_b24k_cpun/best.pt
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.32    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.08/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 330          # 断点 1200 + 330 = end 1530(11 次门控评估)
+  schedule_total_updates: 1530
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 1.0e-4                  # 2e-4 在 lr2 线 1110 掉 20pp, 本次不叠加变量
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com3_multi_b24k_cpun2
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com3_multi_b24k_cpun2
+  print_every: 1

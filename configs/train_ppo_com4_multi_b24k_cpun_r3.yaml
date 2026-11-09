@@ -1,0 +1,98 @@
+# =============================================================================
+# 对战 COM4, 第四轮在线 PPO 精调 (Round-4 Fresh-Optimizer KL-Anchored PPO):
+# 从纯净 best_2430_74pct.pt (min_p=0.015 实测 76.8% +2682 HP, min_p=0.025 实测 77.0% +2543 HP) 起跑:
+# 1. reset_optimizer: true 清除第一轮残留的陈旧 Adam 动量, 杜绝首步冲出信任域;
+# 2. 保持与第一轮完全一致的 reward 系数 (w_counter: 0.08, w_countered_punish: 0.16),
+#    消除 Critic 价值基线失配引起的优势估计污染;
+# 3. 强 KL 锚定 (ref_kl_coef: 0.15, clip_range: 0.10, lr: 1.0e-5, epochs: 2),
+#    将策略严格约束在 best_2430 周围 ref_kl <= 0.015 的高胜率信任域内微调;
+# 4. network.min_p: 0.022 在评估门控 (2D eval mode) 自动截断 <2.2% 的长尾废动作噪声;
+# 5. 每 5 updates 运行 200 局 COM4 门控评估 (2435, 2440)。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+  sampling_temperature: 0.85
+  min_p: 0.015
+
+train:
+  num_envs: 6
+  total_updates: 25           # 从 swa_r11_93pct_warm_adam (2700) 保留二阶矩热启动精调 25步 -> 2725
+  schedule_total_updates: 2725
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 1
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.10
+  value_coef: 0.5
+  entropy_coef: 0.0
+  ref_kl_coef: 0.20
+  ref_temperature: 0.90
+  ref_checkpoint: checkpoints/com4_multi_b24k_cpun_r4/swa_r11_93pct_warm_adam.pt
+  reset_optimizer: false
+  max_grad_norm: 0.5
+  lr: 1.8e-6
+  lr_mode: constant
+  lr_anneal: false
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_r4
+  save_every: 1
+  keep: 45
+
+eval:
+  interval: 2725
+  episodes: 30               # 训练中途不插评，仅在 2725 结束时跑 30 局门控
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_r4
+  print_every: 1

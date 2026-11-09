@@ -1,0 +1,383 @@
+# =============================================================================
+# th155.exe (Touhou 15.5 - Antinomy of Common Flowers, v1.21b) 内存地图
+# =============================================================================
+# 所有地址均为相对于模块基址的 RVA。运行时模块基址通过
+#   GetModuleHandle("th155.exe") / Module32First(TH32CS_SNAPMODULE)
+# 获取；PE 首选基址为 0x400000，但该二进制启用了重定位，
+# 实测每次启动基址不同（例如 0x4A0000），因此严禁硬编码绝对地址。
+#
+# 数据来源：
+#   1) 静态：th155.pak 内嵌脚本反编译产物（.scratch/th155-rl-ai/decomp）+ PE 字节核对；
+#   2) 动态：运行期实机验证（scripts/verify_offsets.py / verify_control.py /
+#      verify_bridge.py），所有偏移都用「读-改-读」闭环确认。
+# 每一条偏移的验证方式见 docs/re_notes.md。
+# =============================================================================
+meta:
+  game: "Touhou 15.5 Antinomy of Common Flowers"
+  version: "1.21b"
+  exe_sha256: "fc6708094b53afa3c00584ecb6e9be14bbf57c2fcd568ef8017af27f8b8ee1f8"
+  exe_size: 5287640
+  pe_timestamp: 1524477382          # 2018-04-23T09:56:22Z
+  preferred_image_base: 0x00400000
+  aslr: true
+  arch: "x86 (32-bit)"
+
+# -----------------------------------------------------------------------------
+# 1. 引擎入口
+# -----------------------------------------------------------------------------
+engine:
+  # 全局 SQVM* 指针（32 位）。读法: vm = *(module_base + vm_global_rva)
+  vm_global_rva: 0x4DACE4
+  # SQVM 结构内 roottable 的 SQObjectPtr（tag 在 +0，值指针在 +4）
+  vm_roottable_offset: 0x30
+  # 引擎主循环帧计数(dword)。sub_40E1A0 在 @0x40E21B 调用输入更新后,
+  # @0x40E21D `inc [0x8DACE0]`;输入 hook 里看到它变化 = 新的一帧边界。
+  frame_counter_rva: 0x4DACE0
+
+# -----------------------------------------------------------------------------
+# 2. Squirrel 3.x 对象布局（32 位；由 th155.exe 内构造函数/绑定代码验证）
+# -----------------------------------------------------------------------------
+squirrel:
+  # ⚠ 写内存时**必须写完整 tag**(0x05000002 等),不能写 raw 形式(0x2):
+  #   游戏内所有 int 槽(表 value / 实例字段 / 数组元素)存的都是完整 tag,
+  #   写 raw tag 会让类型判断仍然通过(读取正常),但对象高位状态被破坏,
+  #   后续脚本执行时抛 Sqrat::Exception 直接崩游戏。详见 docs/re_notes.md §6.0。
+  write_int_tag: 0x05000002
+  write_bool_tag: 0x01000008
+  type_tags:
+    null: 0x01000001
+    integer: 0x05000002
+    float: 0x05000004
+    bool: 0x01000008
+    string: 0x08000010
+    table: 0x0A000020
+    array: 0x08000040
+    closure: 0x08000100
+    nativeclosure: 0x08000200
+    class: 0x08004000
+    instance: 0x0A008000
+  raw_type_mask: 0x00FFFFFF
+  object:
+    # SQObjectPtr = { uint32 type; uint32 value; }  (8 字节)
+    tag: 0
+    value: 4
+  string:
+    # 实机验证(scripts/sq_dump.py)：SQString 头部有 refcount/type 字段,
+    # 长度在 +0x14,字符数据(含 NUL)在 +0x1C。早期版本误记为 0/8。
+    length: 0x14
+    data_offset: 0x1C
+  table:
+    nodes: 32                 # SQTableNode* 数组
+    num_nodes: 36             # 槽位数量（2 的幂）
+    node_stride: 20
+    node_value_tag: 0
+    node_value: 4
+    node_key_tag: 8
+    node_key: 12
+    node_next: 16             # 相对 nodes 的下一节点指针（0 = 结束）
+  array:
+    values: 24                # SQObjectPtr* 连续数组
+    size: 28
+    capacity: 32
+  instance:
+    class: 28                 # SQClass*
+    userpointer: 32           # 原生对象指针（Sqrat 绑定）
+    values: 44                # 实例字段 SQObjectPtr[] 起始
+    value_stride: 8
+  class:
+    members: 24               # 成员表 (SQTable*)：名字 -> 成员索引
+    default_values: 32        # 默认值数组
+    methods: 44               # 方法数组
+    member_field_flag: 0x02000000
+    member_method_flag: 0x01000000
+
+# -----------------------------------------------------------------------------
+# 3. 脚本根表路径（从 roottable 出发，全部为名字查找，无绝对地址）
+# -----------------------------------------------------------------------------
+script:
+  battle_table: "battle"
+  battle:
+    team: "team"                    # array[2] of PlayerTeamData
+    state: "state"                  # int；8 = 战斗进行中
+    time: "time"                    # int；回合剩余帧数（VS 模式 99*90 起倒数）
+    time_unit: "time_unit"          # int；= 90（每显示秒 90 帧）
+    enable_time_count: "enableTimeCount"
+    enable_time_up: "enableTimeUp"
+    round: "round"
+    match_num: "match_num"
+    winner: "winner"
+    count: "count"                  # 全局帧计数（每帧 +1，可作帧同步信号）
+    battle_update: "battleUpdate"   # 当前回合状态机的闭包
+    round_reset: "RoundReset"       # VS 模式：回合重置函数（script closure）
+    practice_restart: "PracticeRestart"  # 练习模式：瞬间重置函数
+    group_player: "group_player"    # Manbow.Actor2DGroup（含全部 Actor2D）
+    group_effect: "group_effect"
+  team:
+    index: "index"
+    master: "master"                # Player 实例
+    slave: "slave"
+    slave_sub: "slave_sub"
+    current: "current"
+    input: "input"                  # Manbow.InputMulti 设备实例
+    master_name: "master_name"
+    slave_name: "slave_name"
+    life: "life"
+    life_max: "life_max"
+    regain_life: "regain_life"
+    damage_life: "damage_life"
+    life_limit: "life_limit"
+    shield_life: "shield_life"
+    sp: "sp"
+    sp_max: "sp_max"
+    sp_max2: "sp_max2"
+    mp: "mp"
+    op: "op"
+    op_stop: "op_stop"
+    spell_active: "spell_active"
+    spell_use_count: "spell_use_count"
+    slave_ban: "slave_ban"
+    combo_count: "combo_count"
+    combo_damage: "combo_damage"
+    start_x: "start_x"
+    start_y: "start_y"
+    target: "target"
+  player:
+    input: "input"                  # 该角色绑定的 InputMulti 设备
+    command: "command"              # InputCommand 实例
+    team: "team"
+    cpu_state: "cpuState"           # 闭包；COM 角色的每帧 AI 决策函数
+    com_difficulty: "com_difficulty" # 0..4（COM1..COM5）
+    com_level: "com_level"          # 0/33/66/100
+    com_baria_rate: "com_baria_rate"
+    com_guard_rate: "com_guard_rate"
+    hit_state: "hit_state"
+    hitStopTime: "hitStopTime"
+    damageStopTime: "damageStopTime"
+    invin: "invin"
+    baria: "baria"
+    ground: "ground"
+    direction: "direction"
+    centerY: "centerY"
+    shot_actor: "shot_actor"        # Manbow.Actor2DProcGroup：该角色所有弹幕
+    shot_class: "shot_class"
+    spellcard: "spellcard"
+    lastword: "lastword"
+    mode: "mode"
+  input_command:
+    device: "device"
+    com: "com"
+    rsv_x: "rsv_x"
+    rsv_y: "rsv_y"
+    rsv_k0: "rsv_k0"
+    rsv_k1: "rsv_k1"
+    rsv_k2: "rsv_k2"
+    rsv_k3: "rsv_k3"
+    rsv_k4: "rsv_k4"
+    rsv_k5: "rsv_k5"
+
+# -----------------------------------------------------------------------------
+# 4. 原生结构偏移
+# -----------------------------------------------------------------------------
+native:
+  actor2d:
+    # SQInstance.userpointer -> Manbow::Actor2D*
+    x: 0x0C            # float
+    y: 0x10            # float
+    id: 0x18           # int
+    vx: 0x2C           # float
+    vy: 0x30           # float
+    direction: 0x38    # float (+1 / -1)
+    animation: 0x3C    # AnimationController*
+    rx: 0x5C           # float: 局部旋转 X
+    ry: 0x60           # float: 局部旋转 Y
+    rz: 0x64           # float: 2D 旋转角 (rad，射线/激光发射角)
+    sx: 0x50           # float: 缩放 X
+    sy: 0x54           # float: 缩放 Y
+    sz: 0x58           # float: 缩放 Z
+    # 以下来自 IDA sub_4944D0(Actor2D 的 SQ 成员注册表)反编译 +
+    # BindFrameVariable(0x495620) 的字段名表,实机位置待验证。
+    group: 0xDC            # int: Actor2D 分组
+    collision_group: 0x7C  # int: 碰撞组位掩码
+    collision_mask: 0x80   # int: 碰撞目标掩码
+    callback_group: 0x84   # int: 回调组(实测玩家 0x1 / 0x2 = team+1)
+    callback_mask: 0x88    # int: 回调目标掩码(实测 0x66006 / 0x55042)
+    box_left: 0x1C         # float: 碰撞 AABB 左（实测玩家 = x-20）
+    box_top: 0x20          # float: 碰撞 AABB 上（实测玩家 = y-60）
+    box_right: 0x24        # float: 碰撞 AABB 右（实测玩家 = x+20）
+    box_bottom: 0x28       # float: 碰撞 AABB 下（实测玩家 = y+50）
+    hit_left: 0x8C         # float: 攻击判定框左边界（实测恒 0，死字段）
+    hit_top: 0x90          # float: 攻击判定框上边界
+    hit_right: 0x94        # float: 攻击判定框右边界
+    hit_bottom: 0x98       # float: 攻击判定框下边界
+  animation_controller:
+    motion: 0x1C       # int：当前 motion id（0 = 站立）
+    key_take: 0x20     # int：当前 take
+    key_frame: 0x24    # int：当前关键帧索引
+  input_multi:
+    # SQInstance.userpointer -> Manbow::InputMulti*（经实机验证：写 x/b* 直接生效）
+    x: 0x04            # int，-1/0/+1
+    y: 0x08            # int，-1/0/+1
+    b0: 0x0C           # int，0/1（Z / 确认）
+    b1: 0x10
+    b2: 0x14
+    b3: 0x18
+    b4: 0x1C
+    b5: 0x20
+    b6: 0x24
+    b7: 0x28
+    b8: 0x2C
+    b9: 0x30
+    b10: 0x34          # 暂停键
+    b11: 0x38
+    xr: 0x3C           # 连发/重复方向
+    yr: 0x40
+    b0r: 0x44
+    b5r: 0x58
+    vector_children: 0x94   # std::vector<InputSingle*> begin/end/cap = 0x94/0x98/0x9C
+    vector_count: 0xA0      # 实测恒等于 (end-begin)/4
+    last_device: 0xA4       # int：最近一次有输入的设备 id（-2 = 无，-1 = 键盘）。
+                            # 全新启动且从未收到真实按键时为 -2，会导致
+                            # character_select 无法创建输入设备；写 -1 即可修复。
+    list_children: 0xD8     # 子设备侵入式链表哨兵
+    state_writer: 0xCC      # 每帧把子设备状态合并进 (+4) 的对象
+    vtable_rva: 0x445360
+    # vtable[1] = InputMulti::Update。入口字节: 55 8B EC 51 56 57 8B F9 8B 87 D8 00 00 00
+    #   -> 遍历 +0xD8 的子设备链表, 逐个 call [child_vt+4], 最后 call [+0xCC] state_writer(&this+4)
+    #   -> 因此在本函数返回后写入 (+4..+0x20) 可 100% 生效(无竞态)
+    update_rva: 0x6F360
+  input_command:
+    # SQInstance.userpointer -> Manbow::InputCommand*
+    b0: 0x0C           # int：按住计数（>0 视为按下）
+    b1: 0x10
+    b2: 0x14
+    b3: 0x18
+    b4: 0x1C
+    b5: 0x20
+    history: 0x24      # 输入历史环形缓冲
+    history_index: 0x204
+  actor2d_proc_group:
+    # player.shot_actor 的 userpointer；侵入式双向链表
+    head_sentinel: 0x00
+    node_next: 0x00
+    node_prev: 0x04
+    node_ptr: 0x08     # shared_ptr<Proc> 的裸指针
+    node_ctrl: 0x0C
+    node_vtable_rva: 0x4E6DD8
+  battle_groups:
+    group_player_vector: 0x14   # Actor2DGroup：Actor2D* 向量
+    group_player_count: 0x10
+
+# -----------------------------------------------------------------------------
+# 5. 回合 / 计时器语义（来自 data/script/battle/battle_vs_player.nut）
+# -----------------------------------------------------------------------------
+round:
+  timer:
+    start_frames: 8910        # 99 * time_unit
+    time_unit: 90             # 每显示秒帧数
+    display_formula: "ceil(time / time_unit)"
+    counts_down: true
+    practice_mode_value: -1   # 练习模式 time 恒为 -1（不计时）
+  states:                 # 实测:自然 KO 时依次经过 8 -> 64 -> 32 -> 128 -> 4 -> 8
+    countdown: 2          # 开场倒计时
+    load: 4               # 回合载入
+    fighting: 8
+    ko: 64                # KO 演出(胜者/败者动作),约 2~3s
+    round_end: 32         # 回合结束演出,约 4s
+    next_round: 128       # 下一回合初始化,约 1s
+  reset:
+    vs_function: "battle.RoundReset"
+    practice_function: "battle.PracticeRestart"
+    practice_hotkey_buttons: ["b0", "b1", "b2", "b3"]  # 同时按下 4 个键触发
+    # 实测安全路径:
+    #   VS 模式自然 KO          -> 约 11s 走完 64/32/128/4/8,稳定(训练默认)
+    #   练习模式 b0~b3          -> 1 帧内完成,但练习模式本身在自动化下会崩(见 §6.1)
+    # 实测危险路径(游戏自身 bug,详见 docs/re_notes.md §10):
+    #   对局中写 battle.time = 0 (强制超时)      -> 数秒后 std::bad_function_call 崩溃
+    #   手动写 battle.endWinDemo/endLoseDemo     -> 可能永久卡在 state=32
+    # 1 帧重置:临时把 battle.battleUpdate 闭包槽换成 battle.RoundReset 闭包,
+    # 借游戏自己的每帧调用触发,下一帧还原(见 docs/re_notes.md §6.0.2)
+    fast_reset:
+      method: "closure_slot_swap"
+      update_slot_field: "battleUpdate"   # 被临时替换的槽
+      reset_closure_field: "RoundReset"   # 换进去的闭包
+      cost_frames: 2                      # 换入 1 帧 + 还原 1 帧
+      verified: "life 5378 -> 9999, time 8549 -> 8910, 25ms"
+    safe_reset: ["fast_reset", "natural_ko"]
+    unsafe_reset: ["battle.time=0", "battle.endWinDemo=true"]
+  ko_flow:
+    note: "KO -> Round_Win -> Round_WinCall(60f) -> BeginNextRound(60f) -> RoundReset -> Round_Begin"
+    next_round_frames: 60
+  # KO/胜负演出时游戏自己会用一个不匹配的参数个数调用某个脚本闭包，
+  # Sqrat 抛 `Sqrat::Exception("wrong number of parameters")`，无人捕获 ->
+  # __fastfail(7) -> abort。下面两处 call 指令的兜底补丁把「抛异常」改成「静默返回」，
+  # 调用点后面紧跟着成功分支的汇合点，因此安全（详见 docs/re_notes.md §6.0.1）。
+  sqrat_throw_guard:
+    throw_fn_rva: 0x2FB5DD          # __CxxThrowException@8（静态 CRT）
+    call_sites_rva: [0x0B90F, 0x0B976]   # sub_40B860 内两处 throw 调用
+    guard_join_labels_rva: [0x0B914, 0x0B97B]  # 对应成功分支汇合点
+    patched_bytes: "E8 rel32"
+
+# -----------------------------------------------------------------------------
+# 6. 内置 AI / COM 难度
+# -----------------------------------------------------------------------------
+ai:
+  cpu_state_field: "cpuState"        # Player 实例字段；置 null 可停用 AI 决策
+  # 难度入口(都必须在**进入对局之前**写入,对局中改会崩):
+  practice_difficulty_table: "config.practice.difficulty"   # 0..4 -> COM1..COM5
+  vs_difficulty_table: "config.difficulty.vs"               # 0..3 -> EASY/NORMAL/HARD/LUNATIC
+  vs_player2_table: "config.vs_com.player"                  # 2P 是 COM 还是人类
+  # 角色实例上的只读观测字段(CPU_SetLevel 写入):
+  player_fields: ["com_difficulty", "com_level", "com_baria_rate", "com_guard_rate"]
+  level_map: { 0: 0, 1: 33, 2: 66, 3: 100, 4: 100 }
+  guard_rate_map: { 0: 25, 1: 33, 2: 50, 3: 90, 4: 95 }
+  baria_rate_map: { 0: 0, 1: 25, 2: 33, 3: 66, 4: 90 }
+  # 实测:对局中直接写上述 com_* 字段(即使按 CPU_SetLevel 全量写)会在数秒后
+  # 触发 std::bad_function_call 崩溃。难度只能走表,字段只读。
+
+# -----------------------------------------------------------------------------
+# 7. 备注：本桥接不调用 Squirrel 函数
+# -----------------------------------------------------------------------------
+# 初期计划用 sq_pushobject/sq_call 直接调用 battle.RoundReset，但实测只需要
+#   练习模式：向 team[0].input 写 b0~b3 = 1  ->  battle.PracticeRestart()（游戏内置快捷键）
+#   对战模式：等自然 KO 走完回合切换
+# 即可完成重置，无需任何脚本调用/VM 栈操作，因此不记录未验证的 sq_call 地址。
+# 若要实现更快的 VS 重置，正确做法是在 Bridge DLL 内封装 sq_call 调用
+# battle.RoundReset()（脚本闭包），而不是改写 battle 的状态字段。
+
+# -----------------------------------------------------------------------------
+# 8. 版本校验
+# -----------------------------------------------------------------------------
+version_check:
+  require_sha256: true
+  fail_policy: "abort_with_message"
+
+
+# -----------------------------------------------------------------------------
+# 9. Bullet Physics 2D 判定系统 (Hitbox / Hurtbox / Graze)
+# -----------------------------------------------------------------------------
+# 游戏碰撞体系完全由 Bullet Physics 2D 接管，挂载在 Actor2D->anim 上
+hitbox_physics:
+  vtable_btBox2dShape_rva: 0x447654      # ??_7btBox2dShape@@6B@ 虚表
+  vtable_btGhostPairCallback_rva: 0x447B64
+  # AnimationController2D 内部判定容器向量 (每项 8 字节: ContactBox* ptr, int id)
+  anim_vectors:
+    hurtbox_offset: 0x78                 # 受击盒向量首地址 (first@0x78, last@0x7C)
+    hitbox_offset: 0x84                  # 攻击判定盒/弹幕盒向量 (first@0x84, last@0x88)
+    graze_offset: 0x90                   # 擦弹/防御盒向量 (first@0x90, last@0x94)
+  # ContactBox -> btCollisionObject -> btBox2dShape 指针链
+  box_offsets:
+    box_to_col_obj: 0x0C                 # ContactBox* -> btCollisionObject*
+    col_obj_to_shape: 0xCC               # btCollisionObject* -> btCollisionShape* (btBox2dShape*)
+    col_obj_transform: 0x10              # btCollisionObject* -> btTransform (世界变换)
+    col_obj_local_offset: 0x180          # btCollisionObject* + 384 (局部偏移 ox, oy, oz)
+  # btBox2dShape 几何属性
+  shape_offsets:
+    scaling_x: 0x10                      # float
+    scaling_y: 0x14                      # float
+    half_extents_x: 0x20                 # float 半宽
+    half_extents_y: 0x24                 # float 半高
+    half_extents_z: 0x28                 # float 半厚度
+    collision_margin: 0x30               # float 外边距 (固定 0.10)
+  # 真实尺寸换算:
+  #   Width  = (half_extents_x + collision_margin) * 2
+  #   Height = (half_extents_y + collision_margin) * 2

@@ -1,0 +1,80 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM2 深挖轮(N2)
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com2_push.yaml
+#       --updates 120 --resume checkpoints/com2_push_resume1140.pt
+#
+# 依据(docs/train_report_com3_full.md §8.12):
+#   * COM3 上直接续训 **会破坏能力**:N1 训练胜率 33.9%,但同一权重采样评估只有 4/20 = 20%
+#     (基线 ppo_001140 = 40%);M 轮同样从 40% 起点训练到 28.4% 训练胜率。
+#   * 唯一被证明能提升 COM3 的操作是 **COM2 巩固**:com3/best.pt(0/10) -> D 轮 41%。
+#   * 但 D(65%)/H(68%)/L(76%) 三轮的 COM3 评估都在 40~41% 徘徊 —— 说明 **76% 还没打透**。
+# 本轮目标:把 COM2 推到 **85%+**(L 轮 60 次更新止步 76%,本轮 120 次),再回看 COM3 是否松动。
+# 与 L 轮保持可比:奖励权重全部用 configs/env.yaml 默认值(不加 reward_overrides),
+# 批量 2048 / 熵 0.02 均相同;唯一差异是更新数与 lr 衔接(L 轮末期 ≈6.6e-5,本轮 base 1.0e-4)。
+# lr 不回到 2e-4 的原因同 N2 配置:续训 lr 退火会重置到 base,3 倍突跳会冲掉已学行为。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 1               # COM2(NORMAL);课程 stage0 必须一致
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 120
+  n_steps: 2048
+  seq_len: 32
+  epochs: 4
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02
+  max_grad_norm: 0.5
+  lr: 1.0e-4
+  lr_anneal: true
+  lr_final_scale: 0.5
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com2_push
+  save_every: 10
+  keep: 5
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com2
+      com_levels: [1]
+      promote_win_rate: 0.85        # 比 L 轮的 0.80 更高:先在 COM2 打透再走
+      entropy_scale: 1.0
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null        # 晋级后不再自动升 COM4/5(未验证过)
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com2_push
+  print_every: 1

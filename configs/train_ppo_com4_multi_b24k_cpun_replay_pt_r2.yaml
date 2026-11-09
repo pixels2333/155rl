@@ -1,0 +1,94 @@
+# =============================================================================
+# 对战 COM4, 第二轮回放后训练 + 锚定低熵在线 PPO (Round-2 Online PPO):
+# 从第二轮微创回放后训练最优权重起跑 (基于 74.0% 的 best_2430_74pct.pt 再做战术动作
+# 正优势 AWBC + 温度锐化), 并针对第一轮在线 PPO 诊断出的三大瓶颈做精确升级:
+#   1. entropy_coef: 0.0035 -> 0.0015 (锁住实机策略熵在 ~2.88-2.92 黄金区间, 防止熵反弹至 3.02 导致胜率回落)
+#   2. ref_kl_coef: 0.0 -> 0.02 (以起跑权重为参考策略做 KL 锚定, 防止在线更新遗忘人类立回 top1 对齐)
+#   3. w_countered_punish: 0.16 -> 0.24 (加强被康惩罚至 -0.06/次, 专门压制 ctr>=7 的开局立回崩盘局)
+#   4. lr: 3.0e-5 -> 2.0e-5 (精细微调步长, 每 20 update 跑一次 200 局 COM4 门控)
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.24    # 加强被康非对称惩罚(经 combat_scale 0.25 后 -0.06/次)
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 180          # 跑 180 updates (每 20 updates 跑一次 200 局门控)
+  schedule_total_updates: 2610
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0015        # 降低熵奖励系数, 维持 ~2.88-2.92 低熵高胜率区
+  ref_kl_coef: 0.02           # KL 锚定至回放后训练起跑策略, 防灾难遗忘
+  ref_checkpoint: checkpoints/R2_M2_fuse_actor/best_val_T095.pt
+  max_grad_norm: 0.5
+  lr: 2.0e-5                  # 精细微调学习率 2e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.025
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_replay_pt_r2
+  save_every: 5
+  keep: 15
+
+eval:
+  interval: 20                # 每 20 updates 跑一次 200 局 COM4 门控
+  episodes: 200
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_replay_pt_r2
+  print_every: 1

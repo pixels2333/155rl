@@ -1,0 +1,103 @@
+# =============================================================================
+# Masked Recurrent PPO —— M3:在**完整观测**上重跑(观测 v17 收官后第一轮)
+#
+# 用法:
+#   $env:PYTHONPATH="D:\programme\155rl\src"
+#   python -m train.train_ppo --config configs/train_ppo_com3_m3.yaml `
+#     --updates 45 --resume checkpoints/com2_push/ppo_001170.pt
+#
+# 为什么不是沿用 M2 配置:
+#   M2(10-25 12:27)写于观测 v13 时代,它假设"self 50 / opp 55 / global 12 /
+#   proj 8×7"。此后 §17 的七项数据修复陆续落地,今天实测观测已是
+#   self 50 / opp 55 / global 23 / proj 8×16 —— **178 维里有 136 维是常数**的时代结束。
+#   M2 的"只改 lr 单变量"前提已不可达:网络输入结构变了,权重必须走 warm_start。
+#   所以本轮不是"M2 继续",而是"新观测上的第一个基线"。
+#
+# 起点必须换回 ppo_001170,不是 com3_m1/ppo_001215:
+#   * 001215 是 M1 的产物,同口径评估 15.0%(40 局,CI 7.1~29.1),
+#     相对起点 42.5% 的差值 CI [-46.4,-8.6] **不含 0 ⇒ 显著退化**(§19.7)。
+#   * 001170(COM2 86.7% / COM3 38.0% 基线)是 §16.8 写定的唯一基线。
+#   拿一个已证退化 27pp 的权重当新观测的起点,会把退化与观测扩容混在一起。
+#
+# 与 M1/M2 的可比项(刻意锁定,便于日后归因):
+#   action_repeat 4 / n_steps 4096 / max_episode_steps 2400 / epochs 2 /
+#   gamma 0.99900025(ar=4 下与 30Hz 的 0.9995 同秒级视野:半衰期 46.2s)/
+#   lr_anneal true / promote_win_rate null。
+#
+# 唯一变量:**观测**(48/53/12/7 -> 50/55/23/8 + 真实弹幕 + 真判定框)。
+#   lr 取 2e-4 而不是 M1 的 3e-5:§19.7 实测 3e-5 下 kl 恒在 1e-4(等于没学),
+#   而 2e-4 在历史三轮里给 kl≈6.5e-3,是 target_kl 的 22%,仍有余量。
+#
+# 已知的未受控项(解读时必须记住):
+#   * entropy_coef 仍是 0.005。它唯一的有效性证据来自 lr=3e-4 的那一轮,
+#     在 2e-4 下未被验证过。若 ent 仍不下降,无法区分"lr 不够"与"0.005 太小"。
+#   * proj_enc 首层被**有意重置**、fuse 对应 128 列被清零(见 PolicyNet._silence_proj_branch):
+#     弹幕通道从"零贡献"起步。旧 checkpoint 的 proj 分支是死代码(掩码全 0),
+#     保留它反而会在真实弹幕进来时向已训好的 fuse 注入噪声。
+#
+# 判据(先写死,避免事后解释):
+#   * 主指标:评估 ≥50 局 --sample,并与 runs/eval/baseline100/eval_com3.json 做 --compare。
+#     胜率差值 95% CI **不含 0** 才算改进;mean_hp_diff 作第二指标。
+#   * 过程:proj_mask 有效数应 ≈13/16(实测),fuse 弹幕列从 0 开始增长。
+#   * ent:历史 45 次更新内从未有轮次压到 2.0(§19.6 已回代全部日志),
+#     因此**不**把"ent 落到 2.0~2.8"当闸门;只看是否单调下降。
+#   * gb(真实格挡)>0 是防御可学的硬判据,但**不作为主要判据** ——
+#     上一轮它已达成(17/203 局),却无胜率收益。
+#   * 停止条件:训练内窗口胜率连续 3 窗 < 10%(崩坏),或连续 3 次评估无显著变化。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 4            # 与 M1/M2 一致,便于跨轮比较
+  round_seconds: 99
+  max_episode_steps: 2400     # 15Hz × 2400 ≈ 160s,与 30Hz × 4700 墙钟对齐
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 45
+  n_steps: 4096
+  seq_len: 32
+  epochs: 2
+  minibatch_seqs: 8
+  gamma: 0.99900025
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.005
+  max_grad_norm: 0.5
+  lr: 2.0e-4
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_m3
+  save_every: 5
+  keep: 8
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_m3
+  print_every: 1

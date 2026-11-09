@@ -1,0 +1,97 @@
+# =============================================================================
+# 对战 COM4, crush: 破防收益验证(tag2 封存后的下一方向)。
+# 依据 §37.8: 掉到 COM4 的损失几乎全由 hp(-0.52)/combat(-0.19)/regain(-0.16)
+# 解释;guard/graze 恒顶格无区分度。w_regain x2 已证否(中性),上限解放已证否
+# (通道仍饱和),w_guard_crush 0.15 -> 0.3 是当时列出但从未验证的候选。
+# 训练日志 guard_breaks_per_match 恒为 0 —— 若抬价后仍恒 0, 说明通道从未触发,
+# 直接封存;若破防出现且胜率动, 再谈剂量。
+# 相对 tag2 的唯一改动: w_guard_crush 0.15 -> 0.30。其余(奖励/lr/网络/课程)不动。
+# 从 tag2 终点 ppo_002610.pt 续训(训练已停,优化器/调度器随 checkpoint 恢复)。
+# 主判读: guard_breaks_per_match 是否从 0 抬起;次判读 200 局门控 win。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_multi_b24k_cpun_tag2\ppo_002610.pt -Log multi_b24k_com4_cpun_crush -Config configs\train_ppo_com4_multi_b24k_cpun_crush.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_guard_crush: 0.30         # 0.15 -> 0.30: 唯一改动,破防收益验证
+  w_spell_interrupt: 0.20
+  w_tag_recover: 1.0          # 沿 tag2 剂量,不动
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300
+  schedule_total_updates: 2910
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_crush
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 200
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_crush
+  print_every: 1

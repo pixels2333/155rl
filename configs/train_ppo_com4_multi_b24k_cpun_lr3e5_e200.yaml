@@ -1,0 +1,91 @@
+# =============================================================================
+# 对战 COM4, 续跑(候选): 只把门控评估从 100 局提到 200 局, 其余与 lr3e5 完全一致。
+# 依据: 100 局 sample 的 95% CI 是 ±9.5pp, 而 COM4 各次门控实测散布 44~62 正好落在该噪声带内 ——
+#   用单次门控判断"策略在震荡"是不成立的, 训练局窗口 48.5~58.1 也没有单向趋势。
+#   要更紧的判读, 先把门控样本量翻倍(200 局 → CI ±6.8pp), 而不是再换一档 lr 去追噪声。
+# 代价: 每次门控约 2× 时间(每 30 次 update 一次 → 实际 update 吞吐下降 ~35%)。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume <ckpt> -Log multi_b24k_com4_cpun_e200 -Config configs\train_ppo_com4_multi_b24k_cpun_lr3e5_e200.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300          # 本次再跑多少(ends = 断点 + 300)
+  schedule_total_updates: 2160
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 1e-4 -> 3e-5: 换对手后 1e-4 连续下滑
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_e200
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 200              # 100 -> 200: 收紧门控 CI(±9.5pp -> ±6.8pp)
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_e200
+  print_every: 1

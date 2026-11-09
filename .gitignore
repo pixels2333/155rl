@@ -1,0 +1,93 @@
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# C / C++ build outputs & Visual Studio
+*.obj
+*.o
+*.lib
+*.exp
+*.pdb
+*.idb
+*.ilk
+*.map
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.vcxproj.user
+
+# Loader intermediate build outputs
+koishi514/loader/build/
+koishi514/release/
+release/
+
+
+# ==============================================================================
+# Reinforcement Learning & Deep Learning large artifacts
+# ==============================================================================
+# PyTorch weights & checkpoints (>11 GB)
+checkpoints/
+tmp_test_ckpt/
+*.pt
+*.pth
+*.ckpt
+
+# TensorBoard logs
+runs/
+*.tfevents.*
+
+# RL Trajectory Datasets & Replay buffers (>120 MB)
+data/replay_trajs/**/*.npz
+data/replay_trajs/**/*.pkl
+data/replay_trajs/**/*.h5
+replay/
+
+# ==============================================================================
+# Scratchpads, Dumps & Temp Files
+# ==============================================================================
+.scratch/
+.scratch_head.txt
+*.log
+eval*.log
+*.tmp
+*.bak
+*.bak-*
+
+# Root scratch images & screenshots
+shot.png
+ref_1280.png
+cmp_fan.png
+cmp_stack.png
+face_tmp_*.png
+
+# ==============================================================================
+# Testing & Environment
+# ==============================================================================
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# ==============================================================================
+# Sensitive & Personal Local Configurations
+# ==============================================================================
+clash-sub/
+
+# ==============================================================================
+# OS & Editor
+# ==============================================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

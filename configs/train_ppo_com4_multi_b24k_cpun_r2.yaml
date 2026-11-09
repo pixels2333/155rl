@@ -1,0 +1,93 @@
+# =============================================================================
+# 对战 COM4, 第二轮在线 PPO 精调 (Round-2 Online PPO):
+# 从第一轮最优门控权重 best_2430_74pct (200局 COM4 74.0%, +2326 HP) 起跑:
+# 1. 降低 entropy_coef (0.0035 -> 0.0012), 防止策略熵重新膨胀至 3.0+ 导致被康率反弹;
+# 2. 启用 ref_kl_coef: 0.025 锚定最优参考策略, 配合 target_kl: 0.012 与 lr: 1.8e-5 防止策略越过盆地;
+# 3. 强化被康非对称惩罚 (w_countered_punish: 0.16 -> 0.22) 与打康奖励 (w_counter: 0.08 -> 0.10);
+# 4. 每 10 updates 运行 200 局 COM4 门控评估 (6 实例并行, 3倍时间分辨率捕捉峰值)。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.10
+  w_countered_punish: 0.22    # 强化被康非对称惩罚
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 20           # 2430 -> 2450 (在 2440 与 2450 运行 200 局 COM4 门控评估)
+  schedule_total_updates: 2450
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.15
+  value_coef: 0.5
+  entropy_coef: 0.0012
+  ref_kl_coef: 0.025
+  ref_checkpoint: checkpoints/com4_multi_b24k_cpun_replay_pt/best_2430_74pct.pt
+  max_grad_norm: 0.5
+  lr: 1.8e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.012
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_r2
+  save_every: 2
+  keep: 20
+
+eval:
+  interval: 10
+  episodes: 200              # 200 局同协议门控 (CI ±6.8pp)
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_r2
+  print_every: 1

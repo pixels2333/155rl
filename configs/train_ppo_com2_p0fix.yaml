@@ -1,0 +1,92 @@
+# =============================================================================
+# Masked Recurrent PPO 训练超参数 —— COM2 P0 修复验证轮
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com2_p0fix.yaml --updates 60 --resume checkpoints/com2_p0fix_resume1080.pt
+# 背景:见 docs/train_report_com3_full.md §7。P0 修复(GAE 终局截断 / 全局优势归一化 /
+# BPTT 局边界隔离 / 按键脉冲释放 / tag_recover_cap=4 / motion 归一化 / 优化器持久化)已落地，
+# 回归 106/106 通过。本轮从 D 轮终点(1080,COM3 采样 9/22≈41%)出发，在 COM2 上验证：
+#   1) tags_per_match 从 ~80 回落(换人刷分漏洞已封)；
+#   2) 连击奖励触发(AAAA 连段解锁)；
+#   3) COM2 胜率稳定突破 80%+，触发课程自动晋级回 COM3。
+# 与 H 轮(com2_batch2048,60 次更新,67.8%)是干净对照：超参完全相同，唯一变量 = P0 修复。
+# 注意:resume 权重已剥离 curriculum 历史(旧 75 局 65% 会把晋级线抬高到几乎不可能)，
+# 本轮课程统计只反映修复后的对局；新旧权重编号延续(1081 -> 1140)，目录独立不覆盖 H 轮。
+# 由 src/train/train_ppo.py 载入;网络结构参数同时被 src/agents/ppo_agent.py 使用。
+# =============================================================================
+env:
+  team: 0                     # 受控队伍(0 = 1P)
+  action_repeat: 2            # 每步推进的游戏帧数(30Hz 决策;墙钟吞吐约 30 步/s)
+  round_seconds: 99           # 回合时长(HUD 显示秒数,= 游戏原生 99;内部 8910 单位 ≈ 148.5s 墙钟)
+  max_episode_steps: 4700     # 单局最多决策步数(30Hz × 4700 ≈ 157s,略长于回合)
+  difficulty: 1               # COM2(NORMAL);启动后 reset_with_restart 会核对实机 com_difficulty
+                              # 必须与 curriculum.stages[0] 一致
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096          # motion_id 词表大小(实测 < 4096)
+  motion_embed: 16            # motion embedding 维度
+  team_hidden: 128            # self / opp 编码器输出维度
+  global_hidden: 64           # 全局特征编码维度
+  proj_hidden: 64             # PointNet 每点特征维度
+  fuse_hidden: 256            # 融合层输出 = LSTM 输入维度
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 60         # 与 H 轮同量:60 × 2048 步 ≈ 12 万步
+  n_steps: 2048               # 单次更新覆盖约 1.3 局,降低单局胜负对优势估计的支配
+  seq_len: 32                 # 截断 BPTT 序列长度(30Hz 下 32 步 = 64 游戏帧 ≈ 1.07s,覆盖完整连段/倒地起身/换人窗口)
+  epochs: 4
+  minibatch_seqs: 8           # 每个 minibatch 的序列数
+  gamma: 0.9995               # 首轮 0.9985 视野仅 22s,而 KO 局普遍 60~90s;0.9995 视野 ~67s
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02          # 实测 0.005 时熵 3.02->2.07、胜率同步下滑;0.02 维持探索
+  max_grad_norm: 0.5
+  lr: 2.0e-4                  # 同一条数据上 3e-4 连续出现胜率下滑,故下调
+  lr_anneal: true             # 线性退火到 lr × lr_final_scale
+  lr_final_scale: 0.33
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com2_p0fix
+  save_every: 10              # 每 N 次更新保存一次
+  keep: 5
+
+# =============================================================================
+# 课程学习(issue 06):按胜率自动把对手从 COM1 推到 COM5。
+# com_levels 用内部编号 0..4(= 人类口径 COM1..COM5),与游戏 config.difficulty.vs 一致。
+# 晋级只在「当前阶段」的最近 window 局里判定,上一阶段的高胜率不会带着继续晋级。
+# =============================================================================
+curriculum:
+  enabled: true               # COM2 胜率 >= 80% 后自动晋级回 COM3
+  # restart = 晋级时重启游戏,按 config.difficulty.vs 走标题菜单重进对局(已验证路径,~20-50s/次);
+  # live    = 对局中直接写角色 com_* 字段(未验证,re_notes §10 记录过会崩;
+  #           启用前先跑 scripts/verify_difficulty.py 证明安全)。
+  # restart 模式只能取阶段内第一个难度,混合轮转(COM2/3、COM4/5)需要 live。
+  apply_mode: restart
+  # 晋级时怎么把新难度落到实处:
+  #  title   = 暂停菜单回标题 -> 重进 VS COM(不重启进程,秒级;失败自动回退 restart)
+  #  restart = 直接杀进程重启(~20-50s)
+  difficulty_switch: restart
+  window: 100                 # 统计窗口(局)
+  min_decided: 30             # 当前阶段至少分出这么多胜负才允许晋级
+  stages:
+    - name: com2
+      com_levels: [1]         # NORMAL(= 人类口径 COM2)
+      promote_win_rate: 0.80  # 打 COM2 胜率 >= 80% 才回到 COM3
+      entropy_scale: 1.0
+    - name: com3
+      com_levels: [2]         # HARD(= 人类口径 COM3):巩固完 COM2 后回到 COM3
+      promote_win_rate: 0.75
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]      # COM4/COM5 混合
+      promote_win_rate: null  # 最终阶段,不再晋级
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }   # 高阶博弈里距离引导会误导,退火到 0
+
+logging:
+  tensorboard: runs/th155_ppo_com2_p0fix
+  print_every: 1

@@ -1,0 +1,93 @@
+# =============================================================================
+# 对战 COM4, 第 3 段候选(未启动): lr 3e-5 + 丢优化器动量 + 白血经济权重加倍。
+# 与 train_ppo_com4_multi_b24k_cpun_lr3e5.yaml 的唯一差异: reward.w_regain 0.5 -> 1.0
+# 依据(COM4 第 1 段 607 局逐分量拆解, 与 COM3 cpun 1527 局对比):
+#   COM3 -> COM4 的损失几乎全由实血差(hp +0.643 -> +0.120)、立回(combat -0.239 -> -0.424)、
+#   白血经济(regain +0.139 -> -0.022)解释; guard/graze 两边都是每局恒定顶格(无区分度)。
+#   regain 是唯一"我方经济项"被反超的分量, 所以先抬它。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_multi_b24k_cpun\ppo_001260_freshopt.pt -Log multi_b24k_com4_cpun_r3 -Config configs\train_ppo_com4_multi_b24k_cpun_lr3e5_regn.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  w_regain: 1.0               # 0.5 -> 1.0: 白血经济在 COM4 上被反超
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300          # 断点 1260 + 300 = end 1560(10 次门控评估)
+  schedule_total_updates: 1560
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 1e-4 -> 3e-5: 换对手后 1e-4 连续下滑
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun
+  print_every: 1

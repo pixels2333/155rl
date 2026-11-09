@@ -1,0 +1,55 @@
+# =============================================================================
+# Masked Recurrent PPO 训练超参数(issue 05)
+# 由 src/train/train_ppo.py 载入;网络结构参数同时被 src/agents/ppo_agent.py 使用。
+# =============================================================================
+env:
+  team: 0                     # 受控队伍(0 = 1P)
+  action_repeat: 2            # 每步推进的游戏帧数(30Hz 决策;墙钟吞吐约 30 步/s)
+  round_seconds: 99           # 回合时长(HUD 显示秒数,= 游戏原生 99;内部 8910 单位 ≈ 148.5s 墙钟)
+  max_episode_steps: 4700     # 单局最多决策步数(30Hz × 4700 ≈ 157s,略长于回合)
+  difficulty: 0               # 游戏内难度索引(0=EASY/COM1,1=NORMAL,2=HARD,3=LUNATIC)
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096          # motion_id 词表大小(实测 < 4096)
+  motion_embed: 16            # motion embedding 维度
+  team_hidden: 128            # self / opp 编码器输出维度
+  global_hidden: 64           # 全局特征编码维度
+  proj_hidden: 64             # PointNet 每点特征维度
+  fuse_hidden: 256            # 融合层输出 = LSTM 输入维度
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 200
+  n_steps: 512                # 每次更新采样步数(单环境 -> 约 40s;num_envs>1 时是**每个 env** 的步数)
+  seq_len: 32                 # 截断 BPTT 序列长度(30Hz 下 32 步 = 64 游戏帧 ≈ 1.07s,覆盖完整连段/倒地起身/换人窗口)
+  epochs: 4
+  minibatch_seqs: 8           # 每个 minibatch 的序列数
+  gamma: 0.9985               # 30Hz(action_repeat=2)下的信用分配视野(半衰期 ~462 步 ≈ 15.4s,对齐终局胜负信号)
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
+  max_grad_norm: 0.5
+  lr: 3.0e-4
+  lr_anneal: true
+  lr_final_scale: 0.33
+  target_kl: 0.03
+  seed: 0
+  num_envs: 1                 # 并行环境数(1 = 单环境原路径);>1 时每个 env 一个 spawn worker 进程(CLI --num-envs)
+  worker_timeout: 900         # 学习者等单个 worker 回复的上限(秒);超时视为死掉,按原 slot 重启
+  worker_max_failures: 5      # 同一 slot 连续失败(采样异常/停顿/死掉/启动失败)超过该次数才报错退出
+
+checkpoint:
+  dir: checkpoints
+  save_every: 10              # 每 N 次更新保存一次
+  keep: 5
+
+eval:
+  interval: 15                # 每 M 次更新触发一次确定性评估 (0=禁用)
+  episodes: 30                # 每次评估对局数
+
+logging:
+  tensorboard: runs/th155_ppo
+  print_every: 1

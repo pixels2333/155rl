@@ -1,0 +1,69 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM2 极限深挖轮(N3)
+# 用法:python -m src.train.train_ppo --config configs/train_ppo_com2_push2.yaml
+#       --updates 90 --resume checkpoints/com2_push2_resume1170.pt
+#
+# 依据(docs/train_report_com3_full.md §9):
+#   * COM2 阶段末 30 局 **86.7%** 的权重(com2_push/ppo_001170)回测 COM3 = **9/20 = 45%**
+#     (基线 40%),mean_hp_diff 由 -1710 收窄到 -1290 ⇒ COM2 打透到 85% 以上才开始明显外溢。
+#   * 上一轮在 85% 触发晋级自动切 COM3,而 COM3 段会毁权重(§9.4)⇒ 本轮 **promote_win_rate: null**,
+#     永不晋级,把 COM2 推到 90%+ 为止。
+# 与上一轮唯一差异:更新数 90、lr 8e-5 衔接(上轮止于 ≈8.7e-5)、关闭晋级。奖励权重维持默认。
+# 判据:COM2 窗口胜率 ≥ 90%;随后用 `.scratch/eval_com3.py` 跑 30 局采样评估(压窄置信区间)。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 1               # COM2
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 90
+  n_steps: 2048
+  seq_len: 32
+  epochs: 4
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02
+  max_grad_norm: 0.5
+  lr: 8.0e-5
+  lr_anneal: true
+  lr_final_scale: 0.5
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com2_push2
+  save_every: 10
+  keep: 6
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com2
+      com_levels: [1]
+      promote_win_rate: null      # 永不晋级:COM3 段已被证明会毁权重
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com2_push2
+  print_every: 1

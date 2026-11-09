@@ -1,0 +1,92 @@
+# =============================================================================
+# 对战 COM4, tag2: probe 分箱定性换人前置条件。从 tag1 终点 ppo_002455.pt 续训。
+# 相对 tag1 的变化: 无(同一 w_tag_recover=1.0,掩码三条件原样)。唯一新增是代码侧
+# train_ppo.py 的 Tag 尝试分箱(motion/slave_ban/white_gap/since_sw/step/ok)。
+# 跑 300 updates 后按成功 vs 失败分箱定性,再决定掩码补哪条。不预设 motion==0 结论。
+# 主判读: probe ok=1 的 motion 分布;次判读 rec/门控 win。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_multi_b24k_cpun_tag1\ppo_002455.pt -Log multi_b24k_com4_cpun_tag2 -Config configs\train_ppo_com4_multi_b24k_cpun_tag2.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  w_tag_recover: 1.0          # 0.05 -> 1.0: 换人启蒙(单变量, 其余不动)
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300
+  schedule_total_updates: 2760
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_tag2
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 200
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_tag2
+  print_every: 1

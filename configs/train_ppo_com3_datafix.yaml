@@ -1,0 +1,78 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM3 数据修复轮（r4）
+# 用法: PYTHONPATH=src python -m train.train_ppo `
+#         --config configs/train_ppo_com3_datafix.yaml `
+#         --updates 45 --resume checkpoints/com2_push/ppo_001170.pt
+#
+# 与 r3 的唯一区别在于**观测/动作空间本身变了**，不是调参:
+#   §17.7 弹幕修复  —— proj_mask 均值 0 → 7.95，69.5% 的帧第一次看得见弹幕;
+#   §17.8 dash 无敌 —— invincible 从恒 0 改为 dashCount>0（实测 dash 期间伤害 1/68）;
+#   §17.9 状态重写  —— hitstun/down/guard/attacking 换成 damageStopTime/guard_state/
+#                      IsAttack 区间（hit_state 被证伪）;
+#   §17.10 y 轴修正 —— 上/下方向此前完全对调。
+#
+# 因此这是**第一次"模型能看见攻击与自己的无敌窗口"的训练**。
+# 历史 checkpoint 的权重可以载入（观测维度仍是 208，未变宽），
+# 但此前所有"防御学不会 / 读招学不会"的结论都需要在新观测下重新检验。
+#
+# 判据（提前约定）:
+#   * 主指标:100 局 COM3 采样评估，与 runs/eval/baseline100 做 --compare，区间不含 0 才算赢;
+#   * 新增过程指标:`caps`/弹幕相关行为要出现变化——之前策略完全没有理由躲弹幕;
+#   * 保护区:COM2 窗口胜率跌破 50% 视为崩坏。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 2
+  round_seconds: 99
+  max_episode_steps: 4700
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 45
+  n_steps: 2048
+  seq_len: 32
+  epochs: 2
+  minibatch_seqs: 8
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.02
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 沿用 r3:COM3 梯度方差大，大步长会打散已有行为
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_datafix
+  save_every: 5
+  keep: 8
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_datafix
+  print_every: 1

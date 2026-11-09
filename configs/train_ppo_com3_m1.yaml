@@ -1,0 +1,83 @@
+# =============================================================================
+# Masked Recurrent PPO —— M1:降熵 + 加大 action_repeat(docs §16.3-A 第 1 项)
+# 用法: PYTHONPATH=src python -m train.train_ppo `
+#         --config configs/train_ppo_com3_m1.yaml `
+#         --updates 45 --resume checkpoints/com2_push/ppo_001170.pt
+#
+# 与 com3_datafix 的差异(逐项都有报告里的实测依据):
+#   1. action_repeat 2 -> 4(30Hz -> 15Hz)。§16.7.1 证明"持续按住后退"有 51.3%
+#      时间处于格挡,而 §16.7.2 障碍② 是策略只保持 6~23 步就松手。决策频率减半后
+#      同样按住 0.5 秒只需一半的连续决策数((3/64)^3 ≈ 1e-4)。
+#   2. entropy_coef 0.02 -> 0.005。§16.7.2 障碍①:ent=3.56、等效支撑 35/64,
+#      策略基本在随机按,无法维持"连续按住"。必须让它先收敛。
+#      两条必须一起改:只降熵不改 repeat,仍要 10 次连续选择才挡得住一套连招。
+#   3. n_steps 2048 -> 4096。单局步数随 repeat 减半,靠翻倍维持每批的探索量。
+#   4. gamma 0.9995 -> 0.99900025 = 0.9995^2。信用分配视野按**秒**保持不变:
+#      决策频率减半 -> 每步时间翻倍 -> 半衰期步数减半 -> gamma 取平方。
+#      (取 sqrt 会把半衰期拉到 185 秒,胜负信号被稀释到视野之外。)
+#   5. 独立 checkpoint 目录(§15 坑 4:同一实验的不同臂必须各占一个目录)。
+#
+# 判据(提前约定,见 docs §16.6):
+#   * ent 落在 2.0~2.8 算正常收敛;< 1.5 视为塌缩,中止。
+#   * gr(防御姿态步)应从 10 升到 >= 30 步/局。
+#   * gb(真实格挡)> 0 是"格挡可学"的唯一硬判据;若 gr 升而 gb 仍为 0,
+#     说明保持时长仍不足 -> action_repeat 继续加大到 6。
+#   * 保护区:训练内 COM2 窗口胜率 < 50% 视为崩坏,立即停止并回滚起点。
+#   * 主指标:50 局 COM3 采样评估 + --compare(baseline100),区间不含 0 才算改进。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 4            # 15Hz 决策(唯一变量之一)
+  round_seconds: 99
+  max_episode_steps: 2400     # 15Hz × 2400 ≈ 160s,与 30Hz × 4700 的墙钟长度对齐
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 45
+  n_steps: 4096
+  seq_len: 32
+  epochs: 2
+  minibatch_seqs: 8
+  gamma: 0.99900025           # 与 30Hz 的 0.9995 同秒级视野(0.9995^2)
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.005         # 0.02 -> 0.005(唯一变量之二)
+  max_grad_norm: 0.5
+  lr: 3.0e-5
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_m1
+  save_every: 5
+  keep: 8
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null   # 不自动晋级:本实验只打 COM3
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_m1
+  print_every: 1

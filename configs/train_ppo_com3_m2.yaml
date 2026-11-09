@@ -1,0 +1,103 @@
+# =============================================================================
+# Masked Recurrent PPO —— M2:只改 lr(docs §19.7 的证据)
+# 用法: PYTHONPATH=src python -m train.train_ppo `
+#         --config configs/train_ppo_com3_m2.yaml `
+#         --updates 45 --resume checkpoints/com3_m1/ppo_001215.pt
+#
+# 与 com3_m1 的差异:**只有一项**
+#   lr: 3.0e-5 -> 2.0e-4
+#
+# 依据(全部是本仓实测,不是经验值):
+#   * §19.7: 两次评估都跑在 ar=4 下(都未传 --action-repeat,
+#     configs/train_ppo_com3_m1.yaml 里 action_repeat=4),
+#     42.5% -> 15.0% 是同一 ar 下、不同权重的对比,
+#     action_repeat 在这个对比里是常量,不能用来解释退化。
+#     历史 eval_com3_push1170.log 在 ar=2 下给 45%(20 局),
+#     本次 ar=4 下给 42.5%(40 局),差 2.5pp 落在噪声内 ⇒ ar=4 无害。
+#   * §19.7: lr=3e-5 时 kl 恒在 1e-4 量级,target_kl=0.03,
+#     累积 45 次更新只有约 0.01 ⇒ 参数几乎没动,ent 3.559->3.568 没降。
+#   * KL 与 lr 近似二次(实测 35x 比值,理论 44x):
+#       lr=3e-5 -> kl≈2.2e-4
+#       lr=2e-4 -> kl≈6.5e-3   (= target_kl 的 22%,仍保守)
+#     要到 kl=0.03 需 lr≈5.2e-4,但历史上 lr=3e-4 出现过熵塌缩(§2.6),
+#     故取 2e-4 而非更激进的值。
+#
+# 为什么不动别的:
+#   * action_repeat 保持 4:已证无害(同权重 ar=2 为 45%,ar=4 为 42.5%,
+#     差 2.5pp 远小于 CI 半宽 11~15pp),且再改就破坏单变量。
+#   * n_steps / epochs / gamma 全保持:它们与 lr 存在耦合,同时改就无法归因。
+#
+# **已知的未受控项:entropy_coef 仍为 0.005**
+#   M1 把它从 0.02 降到 0.005,但那个决定没有在本轮 lr 下被验证过。
+#   查到"0.005 时熵 3.02->2.07"的原始出处是 configs/train_ppo_com3.yaml
+#   那一轮,它的 lr=3e-4、n_steps=1024、epochs=4 —— 与 M1/M2 完全不同。
+#   也就是说:0.005 在 lr=3e-4 下确实能压熵,但在 lr=2e-4 下能否,没有证据。
+#   本轮**不**顺手把它改回 0.02(那会把 lr 与熵系数两个变量一起动),
+#   但解读结果时必须记住:若 ent 仍未下降,无法区分是 lr 不够还是 0.005 太小,
+#   下一步就是单独把 entropy_coef 提到 0.01/0.02 再跑一轮。
+#
+# 判据(提前约定,并用历史回代验证过可达性 —— §19.6 的教训):
+#   * kl 应升到 3e-3 ~ 1e-2 量级(当前 2e-4)。若仍 <=1e-3,lr 没生效,查配置。
+#   * ent 应从 3.57 开始下降。**不在 45 次内要求落到 2.0~2.8**
+#     (历史 330 次才做到),只看"是否开始单调下降"。
+#   * 主指标仍是评估,不是训练内胜率:42.5% 是起点(40 局,CI 28.5~57.8)。
+#     每 15 次更新存一次 ckpt,至少评估中段与终点两次。
+#   * 评估用同一口径:--com-level 3 --sample --config 本文件
+#     (ar=4)。要比较不同 ar 必须显式传 --action-repeat。
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 4            # 保持 4:§19.7 实测对同一权重只差 2.5pp
+  round_seconds: 99
+  max_episode_steps: 2400
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+
+network:
+  motion_vocab: 4096
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+
+train:
+  total_updates: 45
+  n_steps: 4096
+  seq_len: 32
+  epochs: 2
+  minibatch_seqs: 8
+  gamma: 0.99900025           # 与 30Hz 的 0.9995 同秒级视野(0.9995^2)
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.005         # 保持:§19.7 证明它在 lr 小时无效,现在单独观察
+  max_grad_norm: 0.5
+  lr: 2.0e-4                  # **唯一变量**:3e-5 -> 2e-4
+  lr_anneal: true
+  lr_final_scale: 0.6
+  target_kl: 0.03
+  seed: 0
+
+checkpoint:
+  dir: checkpoints/com3_m2
+  save_every: 5
+  keep: 8
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null   # 不自动晋级:本实验只打 COM3
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com3_m2
+  print_every: 1

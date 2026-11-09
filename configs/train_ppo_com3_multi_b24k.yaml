@@ -1,0 +1,96 @@
+# =============================================================================
+# 6 实例大批次续训。与 train_ppo_com3_multi_b16k.yaml 的差异只有:
+#   train.num_envs 4 -> 6(合计 24576 步/update, 约 7 局)
+#   checkpoint.dir / logging.tensorboard
+# 动机: b16k 在 840~930 的 4 次 100 局评估为 70/73/60/66(均值 67%), 训练窗口胜率
+#   从 r1 的约 63% 升到 r2 的约 69%, 仍在缓慢上升; 4 实例训练时整机 CPU 约 48%,
+#   多开 2 个实例把每次 update 的对局数从约 4.7 提到约 7, 每 env 步数与 lr 不变。
+# 用法: python -m train.train_ppo --config configs/train_ppo_com3_multi_b24k.yaml --resume checkpoints/com3_multi_b16k/ppo_000950.pt
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 1200
+  schedule_total_updates: 1200
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 1.0e-4
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com3_multi_b24k
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com3_multi_b24k
+  print_every: 1

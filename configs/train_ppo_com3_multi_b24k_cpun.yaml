@@ -1,0 +1,101 @@
+# =============================================================================
+# 6 实例大批次, lr 1e-4(稳定档) + 加重被康惩罚。与 train_ppo_com3_multi_b24k.yaml 的差异只有:
+#   reward.w_countered_punish: 0.16 (显式写出; DEFAULTS/env.yaml 同值)
+#   train.lr 保持 1e-4 (lr 2e-4 的 lr2 线在 1110 掉 20pp, 不用来叠加变量)
+#   train.total_updates 为"本次再跑多少次", end_it = 断点 update + total_updates
+#   11-01 14:40 第 3 段: 从 best.pt(1200, 75%) 继续 900 次(→2100)。同步对照结论:
+#     cpun2(惩罚 0.32)=72/68、cpun3(抬高格挡 0.05->0.25)=68/66 都更差, 故本段沿用 0.16 原配置
+#   checkpoint.dir / logging.tensorboard
+# 动机: 11 次 100 局 sample 评估均值约 67%, 无斜率; corr(被康/分钟, 掉血/分钟) = -0.76,
+#   但零和项里"被康"只值 -0.08(经 combat_scale 0.25 后 0.02), 相对代价几乎不可见。
+#   这里把被康做成非对称惩罚(只扣我方), 检验能否逼出防御/间距纪律。
+# 用法: python -m train.train_ppo --config configs/train_ppo_com3_multi_b24k_cpun.yaml --resume checkpoints/com3_multi_b24k_lr2/best.pt
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 2               # COM3
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 900          # "本次再跑多少": 断点 1200 + 900 = end 2100(30 次门控评估)
+  schedule_total_updates: 2100
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 1.0e-4                  # 2e-4 在 lr2 线 1110 掉 20pp, 本次不叠加变量
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com3_multi_b24k_cpun
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com3
+      com_levels: [2]
+      promote_win_rate: null
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]
+      promote_win_rate: null
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com3_multi_b24k_cpun
+  print_every: 1

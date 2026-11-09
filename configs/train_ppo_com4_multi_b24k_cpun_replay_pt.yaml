@@ -1,0 +1,91 @@
+# =============================================================================
+# 对战 COM4, 回放后训练接力在线 PPO (方案 A):
+# 从回放后训练最优权重 checkpoints/com4_replay_posttrain_best/best.pt (E5, update 2310,
+# COM4 盲测 400 局 66.0% / 全合并 460 局 67.2%, COM3 100 局 79.0%) 起跑,
+# 保持与 e200 完全一致的 COM4 在线 PPO 超参(6 实例 x 4096 = 24576 步/update,
+# lr 3.0e-5 constant, w_countered_punish 0.16, 每 30 update 跑 200 局门控)。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume checkpoints\com4_replay_posttrain_best\best.pt -Log multi_b24k_com4_cpun_replay_pt -Config configs\train_ppo_com4_multi_b24k_cpun_replay_pt.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 300          # 本次再跑 300 updates (2311 -> 2610)
+  schedule_total_updates: 2610
+  n_steps: 4096               # 每个 env;合计 24576
+  seq_len: 64
+  epochs: 4
+  minibatch_seqs: 16
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 常数微调学习率 3e-5
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_replay_pt
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 200              # 200 局同协议门控 (CI ±6.8pp)
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_replay_pt
+  print_every: 1

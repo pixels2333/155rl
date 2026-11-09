@@ -1,0 +1,88 @@
+# =============================================================================
+# Masked Recurrent PPO —— COM3 60Hz,motion 词表修复(§36)后从 best.pt(update 765)续训
+# 与 train_ppo_com3_60hz_coldstart.yaml 唯一差异:checkpoint/tensorboard 目录独立,避免与旧线混淆
+# 用法: python -m train.train_ppo --config configs/train_ppo_com3_motionfix.yaml --resume checkpoints/com3_60hz_coldstart/best.pt
+# =============================================================================
+env:
+  team: 0                     # 受控队伍(0 = 1P)
+  action_repeat: 1            # 每步推进 1 游戏帧 (60Hz 逐帧决策反应, 物理极限延迟 16.7ms)
+  round_seconds: 99           # 回合时长(HUD 显示秒数 = 99; 对应 8910 内部 time 单位 ≈ 148.5s)
+  max_episode_steps: 9400     # 单局最多决策步数 (60Hz × 157s ≈ 9400 步, 与 30Hz 下的 4700 步等长)
+  difficulty: 2               # 游戏内难度索引 (2 = HARD / COM3)
+  frame_timeout: 1.0
+
+reward:
+  guard_window: 25            # 60Hz 防后确反窗口 (25 步 ≈ 416ms, 覆盖 8~12 帧格挡硬直 + 6~8 帧起手)
+  w_guard_punish: 0.15        # 防后确反奖励 (经 combat_scale 0.25 后为 0.0375, 给足反击正反馈)
+  w_counter: 0.08             # 打康 / 被康奖惩 (增大盲目抢招被打康惩罚)
+  w_guard_read: 0.03          # 轻量中近距离立回架招引导 (每步)
+  guard_read_range: 240.0     # 立回架招威胁距离阈值 (像素)
+  w_spell_interrupt: 0.20     # 符卡确反/大招打断激励
+  terminal_win: 2.5           # 胜负终局加权 (±1.0 -> ±2.5), 压倒过程刷分收益
+  terminal_lose: -2.5
+  terminal_draw: -1.5         # 严惩平局
+  kill_instinct_hp: 2000.0    # 对手残血斩杀阈值
+  kill_instinct_mult: 1.5     # 残血斩杀伤害倍率
+
+network:
+  motion_vocab: 10240         # motion_id 词表大小(docs §36:脚本中玩家动作 motion 最大 9903,4096 会截断符卡 4000~4999)
+  motion_embed: 16            # motion embedding 维度
+  team_hidden: 128            # self (58+16) / opp (63+16) 编码器输出维度
+  global_hidden: 64           # 全局特征编码维度 (GLOBAL_DIM=24, 含激光前摇预警)
+  proj_hidden: 64             # PointNet 每点特征维度 (PROJ_DIMS=12, 含激光射线几何与威胁)
+  fuse_hidden: 256            # 融合层输出 = LSTM 输入维度
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true       # 全新正交初始化 (gain: hidden=sqrt(2), actor=0.01, critic=1.0)
+
+train:
+  total_updates: 1200          # Ticket 09 增加时停预缓冲与符卡确反打断机制，按要求追加 200 轮探索
+  schedule_total_updates: 1200 # 扩展退火基准至 700 轮，确保加轮训练期间学习率平滑锁定在 6.6e-5 微调底线
+  n_steps: 4096               # 60Hz 下单批次覆盖约 1~2 局完整对局 (4096 步 ≈ 68s), 提供充足的终局 GAE 信号
+  seq_len: 64                 # 截断 BPTT 序列长度 (60Hz 下 64 步 = 64 帧 ≈ 1.07s, 覆盖完整连段/受身起立窗口)
+  epochs: 4
+  minibatch_seqs: 8           # 每个 minibatch 包含的序列数 (8 × 64 = 512 步)
+  gamma: 0.9995               # 60Hz 下远视衰减因子 (视野跨越完整回合 60~90s)
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035         # 终局攻坚阶段(Ticket 10)大幅降熵收敛固化 (0.005 -> 0.001)，打破 60% 横盘平台期，固化 80% 压制肌肉记忆
+  max_grad_norm: 0.5
+  lr: 3.0e-5
+  lr_mode: constant                  # 初始学习率
+  lr_anneal: false             # 线性退火至 lr × lr_final_scale
+  lr_final_scale: 1.0        # 退火下限 (6.6e-5)
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com3_60hz_motionfix
+  save_every: 10              # 每 10 次更新保存一次周期性 checkpoint
+  keep: 5
+
+eval:
+  interval: 25                # 每 25 次更新评估一次; 50 局下 CI 约 ±14pp, 30 局噪声过大
+  episodes: 50                # 每次过程评估 50 局 (Wilson 95% CI 约 ±14pp; 100 局约 ±9pp)
+  deterministic: false        # 采用与实战/历史基线一致的概率采样模式 (sample)，消除格斗博弈中 argmax 单动作死锁失真
+
+curriculum:
+  enabled: true               # 启用课程晋级机制
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100                 # 统计窗口 (局)
+  min_decided: 30             # 当前阶段至少分出 30 局胜负才允许晋级
+  stages:
+    - name: com3
+      com_levels: [2]         # HARD (= COM3)
+      promote_win_rate: null  # 确定性胜率 >= 75% 晋级
+      entropy_scale: 1.0
+    - name: com4_5
+      com_levels: [3, 4]      # COM4/COM5 混合
+      promote_win_rate: null  # 最终阶段不再晋级
+      entropy_scale: 0.6
+      reward_overrides: { w_approach: 0.0 }
+
+logging:
+  tensorboard: runs/th155_ppo_com3_60hz_motionfix
+  print_every: 1

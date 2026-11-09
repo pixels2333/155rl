@@ -1,0 +1,92 @@
+# =============================================================================
+# 对战 COM4, 训练量放大(候选, 未启动): n_steps 4096 -> 6144, epochs 4 -> 6。
+# 其余与 train_ppo_com4_multi_b24k_cpun_lr3e5.yaml 相同(difficulty 3 / 单阶段 com4 / lr 3e-5 / 6 实例)。
+# 动机: COM4 上 reward 与 lr 侧的可动项已全部测完(见 docs §37.8), 剩下的差异是实血差(+0.643 -> +0.120),
+#   属于决策质量。当前每次 update 只用 24576 步做 4 个 epoch; 单局约 3700 步, 也就是说一次 update
+#   看到的整局样本只有 ~6.6 局。加大 batch 与 epoch 是"同样的机器时间换更强的梯度"的最直接办法。
+# 显存/时间代价: 每 update 采样时间 ×1.5, 单卡显存足够(模型小)。
+# 用法: .scratch/infra3/launch_b16k.ps1 -Resume <ckpt> -Log multi_b24k_com4_cpun_big -Config configs\train_ppo_com4_multi_b24k_cpun_bigbatch.yaml
+# =============================================================================
+env:
+  team: 0
+  action_repeat: 1
+  round_seconds: 99
+  max_episode_steps: 9400
+  difficulty: 3               # COM4 (内部 com_level 3; 0..4 = COM1..COM5)
+  frame_timeout: 1.0
+  lockstep: true
+  lockstep_timeout_ms: 0
+  frame_period_us: 4166
+
+reward:
+  guard_window: 25
+  w_guard_punish: 0.15
+  w_counter: 0.08
+  w_countered_punish: 0.16    # 被康非对称惩罚(只扣我方), 经 combat_scale 0.25 后 0.04/次
+  w_guard_read: 0.03
+  guard_read_range: 240.0
+  w_spell_interrupt: 0.20
+  terminal_win: 2.5
+  terminal_lose: -2.5
+  terminal_draw: -1.5
+  kill_instinct_hp: 2000.0
+  kill_instinct_mult: 1.5
+
+network:
+  motion_vocab: 10240
+  motion_embed: 16
+  team_hidden: 128
+  global_hidden: 64
+  proj_hidden: 64
+  fuse_hidden: 256
+  lstm_hidden: 256
+  lstm_layers: 1
+  orthogonal_init: true
+
+train:
+  num_envs: 6
+  total_updates: 200          # 断点 x + 200
+  schedule_total_updates: 1860
+  n_steps: 6144               # 每个 env;合计 36864
+  seq_len: 64
+  epochs: 6
+  minibatch_seqs: 24
+  gamma: 0.9995
+  gae_lambda: 0.97
+  clip_range: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.0035
+  max_grad_norm: 0.5
+  lr: 3.0e-5                  # 1e-4 -> 3e-5: 换对手后 1e-4 连续下滑
+  lr_mode: constant
+  lr_anneal: false
+  lr_final_scale: 1.0
+  target_kl: 0.03
+  seed: 0
+  orthogonal_init: true
+
+checkpoint:
+  dir: checkpoints/com4_multi_b24k_cpun_big
+  save_every: 5
+  keep: 10
+
+eval:
+  interval: 30
+  episodes: 100
+  deterministic: false
+
+curriculum:
+  enabled: true
+  apply_mode: restart
+  difficulty_switch: restart
+  window: 100
+  min_decided: 30
+  stages:
+    - name: com4
+      com_levels: [3]
+      promote_win_rate: null
+      entropy_scale: 1.0
+
+logging:
+  tensorboard: runs/th155_ppo_com4_multi_b24k_cpun_big
+  print_every: 1
