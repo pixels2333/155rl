@@ -3877,6 +3877,7 @@ function ClimaxEnemyMask( t )
 	{
 		this.owner = this.owner.owner;
 	}
+	this.DrawActorPriority(211);
 	this.target = this.owner.target.weakref();
 	this.flag1 = {};
 	this.flag1.take <- 0;

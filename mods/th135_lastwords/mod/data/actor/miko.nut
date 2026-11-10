@@ -2934,12 +2934,13 @@ function Spell_Climax_Cut( t )
 	this.SetTimeStop(600);
 	this.PlaySE(2150);
 	this.cameraPos.x = this.x;
-	this.count = 0;
-	this.target.isVisible = false;
-	this.BackFadeOut(0.0, 0.0, 0.0, 10);
-	this.Warp(640, 360);
-	this.cameraPos.x = this.x;
 	this.cameraPos.y = this.y;
+	this.count = 0;
+	if (this.target)
+	{
+		this.target.isVisible = false;
+	}
+	this.BackFadeOut(0.0, 0.0, 0.0, 10);
 	::camera.SetTarget(this.cameraPos.x, this.cameraPos.y - 50, 3.0, true);
 	this.FadeIn(1.0, 1.0, 1.0, 30);
 	this.stateLabel = function ()
@@ -2949,8 +2950,8 @@ function Spell_Climax_Cut( t )
 		if (this.count == 90)
 		{
 			this.flag1 = [
-		this.SetFreeObject(640, 360, this.direction, this.Climax_Face, {}).weakref()
-	];
+				this.SetFreeObject(640, 360, this.direction, this.Climax_Face, {}).weakref()
+			];
 			this.SetMotion(4900, 3);
 			this.stateLabel = function ()
 			{
@@ -2974,17 +2975,49 @@ function Spell_Climax_Cut( t )
 
 function Spell_Climax_Finish( t )
 {
-	this.target.isVisible = true;
+	if (this.target)
+	{
+		this.target.isVisible = true;
+	}
 	this.FadeIn(1.0, 1.0, 1.0, 15);
 	this.BackFadeIn(0.0, 0.0, 0.0, 0);
 	::camera.ResetTarget();
 	this.LabelReset();
 	this.HitReset();
 	this.SetTimeStop(3);
+	if (this.target)
+	{
+		this.flag1 = this.Vector3();
+		if (this.x < this.target.x)
+		{
+			this.flag1.x = this.target.x - 200.0;
+		}
+		else
+		{
+			this.flag1.x = this.target.x + 200.0;
+		}
+		this.flag1.y = this.target.y;
+		this.flag1.x = this.Math_MinMax(this.flag1.x, 20, 1260);
+		this.Warp(this.flag1.x, this.flag1.y);
+		if (this.y > this.centerY)
+		{
+			this.centerStop = 2;
+		}
+		else if (this.y < this.centerY)
+		{
+			this.centerStop = -2;
+		}
+		else
+		{
+			this.centerStop = 0;
+		}
+		this.GetFront();
+		this.PlaySE(2101);
+	}
 	this.SetMotion(4900, 4);
 	this.BackFadeOut(0.0, 0.0, 0.0, 1);
 	::camera.Shake(10.0);
-	this.SetShot(640, 360, this.direction, this.Climax_Shot, {});
+	this.SetShot(this.x, 360.0, this.direction, this.Climax_Shot, {});
 	this.stateLabel = function ()
 	{
 	};

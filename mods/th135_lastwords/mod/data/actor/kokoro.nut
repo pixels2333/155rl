@@ -3432,6 +3432,11 @@ function Spell_Climax_Init( t )
 		{
 			this.lastword.Deactivate();
 			::battle.enableTimeUp = true;
+			this.DrawActorPriority();
+			if (this.target)
+			{
+				this.target.DrawActorPriority();
+			}
 		};
 	},
 	function ()
@@ -3516,6 +3521,11 @@ function Climax_A1( t )
 	this.ClearMask();
 	this.LabelReset();
 	this.HitReset();
+	this.DrawActorPriority(180);
+	if (this.target)
+	{
+		this.target.DrawActorPriority(210);
+	}
 	this.Warp(640, this.centerY);
 	this.SetMotion(4902, 0);
 	::graphics.ShowBackground(false);
@@ -3532,6 +3542,7 @@ function Climax_A1( t )
 		this.target.masterRed = 0.0;
 		this.target.masterBlue = 0.0;
 		this.target.masterGreen = 0.0;
+		this.target.DrawActorPriority(210);
 		this.PlaySE(2983);
 		::camera.Shake(2.0);
 		this.FadeOut(0.0, 0.0, 0.0, 20);
@@ -3606,6 +3617,11 @@ function Climax_Finish( t )
 		this.target.masterRed = 1.0;
 		this.target.masterBlue = 1.0;
 		this.target.masterGreen = 1.0;
+		this.DrawActorPriority();
+		if (this.target)
+		{
+			this.target.DrawActorPriority();
+		}
 		this.count = 0;
 		this.autoCamera = true;
 		this.freeMap = false;

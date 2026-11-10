@@ -232,6 +232,40 @@
 
 ---
 
+### 坑点 8：秦心 (`kokoro`) 终符结尾立绘 `climaxCut.dds` 与黑白剪影阶段水墨贴图 `effect00..06.png` 白色色块遮挡
+- **故障表现**：
+  1. 秦心释放 LastWord（*「仮面喪心舞　暗黒能楽」*）结尾缺少 TH13.5 专属立绘特写；
+  2. 黑白剪影阶段，对面受击像素小人与秦心本体被白色矩形色块盖住，没有呈现在白色剪影幕布之上。
+- **根因剖析**：
+  - `kokoro.pat` `Motion 7900 Take 3` 在 TH13.5 中引用 `texture\climaxCut.dds`（DXT5 压缩纹理），需转换为标准 PNG 并在 `.pat` 纹理表中映射为 `texture\climaxCut.png`；
+  - 水墨笔触贴图 `texture\effect00.png` ~ `effect06.png` 原文件为白底黑墨且 Alpha 全为 `255`，若未转换透明通道或渲染层级（`DrawActorPriority`）高于角色层，不透明白底会直接遮挡场上的黑色剪影小人。
+- **标准解法**：
+  - 将 `climaxCut.dds` 解码为 `texture\climaxCut.png` 并恢复 `Climax_Cut` 生成逻辑；
+  - 将 `effect00..06.png` 的白色背景转换为透明 Alpha 通道，并将水墨背景层的 `DrawActorPriority` 置于角色剪影层之下。
+
+---
+
+### 坑点 9：丰聪耳神子 (`miko`) 终符「承詔必謹」板边打空与两阶段瞬移时序（先出立绘、立绘演完再瞬移）
+- **故障表现**：
+  1. 神子在板边释放 LastWord 时，巨剑光柱仍劈在场地中央（`x=640`）导致打空；
+  2. 若将瞬移逻辑写在阶段一（`Spell_Climax_Init` 或 `Spell_Climax_Cut`），神子会在按下大招瞬间立刻闪现到对手身边，违背了原版“先在原地播放立绘特写、立绘结束后进入斩击阶段才瞬移到对手身前”的演出时序。
+- **标准解法（100% 还原 TH13.5 `SP_A_Init` 瞬移代码）**：
+  - **阶段一（`Spell_Climax_Init` & `Spell_Climax_Cut`，`Motion 4900 Take 0..3`）**：严禁调用 `Warp`，神子保持在起手原位播放立绘特写；
+  - **阶段二（`Spell_Climax_Finish`，`Motion 4900 Take 4`）**：在立绘结束切入挥剑斩击时，完整植入 TH13.5 `miko.nut` 原版 `SP_A_Init` 瞬移代码，传送至 `this.target.x ± 200.0`（限制在 `[20, 1260]` 范围内）、调用 `this.GetFront()` 转向对手，并在 `(this.x, 360.0)` 处生成 `this.Climax_Shot`。
+
+---
+
+### 坑点 10：`.pat` 跨版本（`ver=13` → `ver=17`）丢失 `uv_mode = 2` 图层标志导致神子 LastWord 像素小人固定为红袍
+- **故障表现**：丰聪耳神子无论当前处于默认星空紫袍（`style = 0`）、怪奇蓝袍（`style = 2`）还是怪奇红袍（`style = 1`）状态，释放 LastWord（`Motion 4900`）时像素小人的斗篷始终显示为死板的纯红色。
+- **根因剖析**：
+  - 神子的角色像素图（`climax0000.bmp` ~ `climax00130.bmp`）在 `palette000.bmp` 调色板中将斗篷区域设为纯红遮罩底色，依靠 `miko_base.nut` 中的 `this.uv` 动态纹理层（`Motion 9901 / 9902 / 9900`）在渲染时实时映射斗篷花纹；
+  - 在 TH13.5 (`ver=13`) `.pat` 中，34 字节 Sprite 记录（`<BBBBBhhhhhB`）的最后一个字节为 `uv_mode = 2`（代表启用 `this.uv` 映射）；而在 TH15.5 (`ver=17`) `.pat` 中，该标志对应图层头的 **`l_type = 128` (`0x80`), `l_blend = (1, 1, 2, 0)`**；
+  - 若打包 `ver=17` `.pat` 时将图层头硬编码为 `l_type = 0, l_blend = (1, 1, 0, 0)`，引擎不会对该图层应用 `this.uv` 斗篷纹理，从而直接裸露调色板底层的纯红遮罩色。
+- **标准解法**：
+  - 解析 `ver=13` Sprite 记录时提取末尾字节 `uv_mode`，在打包 `ver=17` 图层时对 `uv_mode == 2` 且非加算混合的角色图层输出 `l_type = 128` 与 `l_blend = (1, 1, 2, 0)`。
+
+---
+
 ## 三、 文件编码与多目录同步铁律
 
 1. **脚本编码铁律（`CP932 / Shift-JIS`）**：

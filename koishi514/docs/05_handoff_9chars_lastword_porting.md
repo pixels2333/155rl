@@ -1,7 +1,7 @@
 # 工作交接文档 (Handoff)：TH13.5 全角色 LastWord（心绮楼终符）跨代移植至 TH15.5（已全部完工）
 
-> **更新时间**：2026-11-08  
-> **当前状态**：✅ **100% 完工并已完成 4 大目标目录全量同步验证（共 10 名角色、245 个 Mod 文件）**  
+> **更新时间**：2026-11-10  
+> **当前状态**：✅ **100% 完工并已完成全目标目录全量同步验证（含秦心结尾立绘/剪影图层与神子阶段二瞬移时序/动态斗篷 UV 映射修复）**  
 > **关联前序文档**：[`04_mod_porting_lessons_and_pitfalls.md`](file:///d:/programme/155rl/koishi514/docs/04_mod_porting_lessons_and_pitfalls.md)
 
 ---
@@ -158,6 +158,14 @@
    - **H3–H6**：零命中——`LabelClear` 仅出现在 `Init`；全部 `Fade*` 作用于玩家本体/自身/玩家 owner；`koishi Climax_Cut L3324` 自身 `FadeOut(20f @151→171)` 安全：调用者无自销毁、存活过 171（`Finish` 在 181 才调），且 `effect_class/team` 经 `battle_team.nut:889-895` 赋予全部 4 类、`EF_*` 经 `Actor2D` 基类继承，调用时无缺槽；`kokoro` 的 `anime.*` 全系 `SetFreeObjectDynamic` 生成；`hitTarget={}` 为原版命中后惯用法（4 处）；`SetShotTrim` 零出现。
    - **死代码（定义-only、永不执行，非 bug，不修复）**：`reimu.Climax_Back`（`t.owner`）、`miko.Climax_Back`（`t.owner`）、`koishi.Climax_Shot`（`t.keyTake/rot`，现役为 `Climax_ShotB`）、`ichirin.ClimaxShotHigh`（`init.point`）、`mamizou Climax_SmokeWallA/B/C/D`、`reimu Climax_LockA2/LockA_Core`（含其链下 LockB 子函数）、`marisa Climax_CutA`、`hijiri ClimaxEffect_DashSpark`、`hijiri Climax_FInish`（typo 变体，`Climax_B` 经 `EndtoFallLoop` 结束从未调用）。
    - **工具教训**：shell `grep` 在本 cp932 树下对 `this.direction =` 漏报（报 0 处，实 47 处），本复查一律以 python+cp932 直读为 ground truth；跨角色同名函数必须按角色作用域分别 join。
+11. **秦心 (`kokoro`) 终符结尾立绘还原与黑白剪影阶段图层遮挡修复（2026-11-10）**：
+   - 将 TH13.5 `texture\climaxCut.dds` 转换为 `texture\climaxCut.png` 并接入 `kokoro.pat` `Motion 7900 Take 3`，恢复结尾 TH13.5 专属立绘特写；
+   - 将水墨特效贴图 `kokoro/texture/effect00..06.png` 转换为带精确墨迹透明通道的 PNG（消除不透明白底），并将水墨与背景遮罩的 `DrawActorPriority` 置于角色剪影层之下，使受击像素小人清晰呈现在白色剪影幕布之上。
+12. **丰聪耳神子 (`miko`) 终符两阶段瞬移时序与板边命中还原（2026-11-10）**：
+   - 阶段一（`Spell_Climax_Init` & `Spell_Climax_Cut`）保持 TH13.5 原版原地出立绘逻辑，绝不提前瞬移；
+   - 阶段二（`Spell_Climax_Finish`）立绘结束后，完整复用 TH13.5 `miko.nut` 原版 `SP_A_Init` 缩地瞬移代码传送至对手身前 200px（边界夹紧 `[20, 1260]`）、调用 `this.GetFront()` 转向对手，并在 `(this.x, 360.0)` 生成 `this.Climax_Shot`，彻底解决板边打板中问题。
+13. **丰聪耳神子 (`miko`) 终符像素小人斗篷颜色随当前状态动态变化修复（2026-11-10）**：
+   - 在 `audit_135_vs_155_exact.py` 与 `patch_all_9_pats.py` 中保留 TH13.5 `ver=13` Sprite 记录末尾字节 `uv_mode = 2`，并在打包 `ver=17` 图层时输出 `l_type = 128, l_blend = (1, 1, 2, 0)`，恢复 `miko.pat` `Motion 4900` 角色图层对 `this.uv` 动态斗篷纹理（默认星空紫袍 `style=0` / 怪奇蓝袍 `style=2` / 怪奇红袍 `style=1`）的实时映射。
 
 ---
 

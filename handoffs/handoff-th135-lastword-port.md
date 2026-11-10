@@ -1,7 +1,7 @@
 # 交接文档：TH13.5 全角色 LastWord 移植与特效修复 (koishi514)
 
 > **创建时间**：2026-11-09  
-> **更新时间**：2026-11-09（全 10 角色 TH13.5 原版终符名、`spell_font.bmp` 字模注入与实机闭环验证）  
+> **更新时间**：2026-11-10（秦心结尾立绘与黑白剪影图层遮挡修复、神子阶段二瞬移时序与动态斗篷 UV 状态还原）  
 > **交接目标**：记录 TH13.5（《东方心绮楼》）向 TH15.5（《东方凭依华》，`koishi514` Mod）移植全角色 LastWord（Climax Spell / 终符）的核心进展、逆向资产、已知约束、阻塞问题、`Manbow::FontTexture` 纹理字库补丁与全角色实机连拍验证结果。
 
 ---
@@ -32,8 +32,8 @@
 | **雾雨魔理沙 (`marisa`)** | `「サングレイザー」` | 召唤出的迷你魔理沙小人衣服变全黑 | 修复调色板与位深冲突（24-bit RGB -> 32-bit ARGB），小人色彩还原，高空下坠爆炸 | **6474** | 100% 原版名无 `#` | 正常 |
 | **河城荷取 (`nitori`)** | `「スーパースコープ３Ｄ」` | 释放后游戏直接卡死、屏幕出现巨大纯白方块 | 修复循环状态跳转；识别 `mask.png` 蒙版，在 `.pat` 中切换为加色混合（Add Blend）消除白底方块 | **1088** | 100% 原版名无 `#` | 正常 |
 | **二岩猯藏 (`mamizou`)** | `「八百八狸囃子」` | 变身烟雾与爆炸缺失；原名缺失「狸囃」显示为 `「八百八##子」` | 补充 `smokeb.png` 烟雾与 `firea0000.png` 火光；向 `spell_font.bmp` 注入「狸囃」字模，恢复原名 | **7473** | 100% 原版名无 `#` | 正常 (motion 19) |
-| **丰聪耳神子 (`miko`)** | `「承詔必謹」` | 缺失光柱与地面特效；原名 4 字全部缺失显示为 `「####」` | Take 0 补充 `laserbasea000.png` 激光束与爆发；向 `spell_font.bmp` 注入「承詔必謹」字模，恢复原名 | **7872** | 100% 原版名无 `#` | 正常 (motion 0) |
-| **秦心 (`kokoro`)** | `「仮面喪心舞　暗黒能楽」` | 终符立绘特写花屏/对齐错位；原名缺失「仮喪暗」显示为 `「#面#心舞　#黒能楽」` | 修复 `climaxCut.dds` 纹理尺寸对齐为 4 像素标准步长 (`1280x1016`)；注入「仮喪暗」字模，恢复原名 | **7500** | 100% 原版名无 `#` | 正常 (motion 0) |
+| **丰聪耳神子 (`miko`)** | `「承詔必謹」` | 缺失光柱与地面特效；板边打空；立绘前提前传送；像素小人固定红袍；原名缺字模 | Take 0 补充激光束；阶段一保持原地出立绘、阶段二（`Spell_Climax_Finish`）复用 TH13.5 `SP_A_Init` 瞬移至对手身前 200px 斩击；`Motion 4900` 恢复 `l_type=128, l_blend=(1,1,2,0)` 动态斗篷 UV 映射；修补字模 | **7872** | 100% 原版名无 `#` | 正常 (motion 0) |
+| **秦心 (`kokoro`)** | `「仮面喪心舞　暗黒能楽」` | 结尾缺失 TH13.5 立绘；黑白剪影阶段受击小人被白色水墨色块遮挡；原名缺字模 | 转换 `climaxCut.dds` 为 `climaxCut.png` 并恢复 `Climax_Cut` 特写；水墨贴图 `effect00..06.png` 转换透明 Alpha 通道并调整渲染层级使受击剪影位于白幕之上；修补字模 | **7500** | 100% 原版名无 `#` | 正常 (motion 0) |
 | **云居一轮 (`ichirin`)** | `「華麗なる親父時代」` | 出招表未正确注册、释放时逻辑循环死锁；原名缺失「華親父時代」显示为 `「#麗なる####」` | 补齐出招表动作映射，修复 Take 跳转；向 `spell_font.bmp` 注入「華親父時代」字模，恢复原名 | **900帧强化态** | 100% 原版名无 `#` | 正常 (motion 0) |
 | **圣白莲 (`hijiri`)** | `「アタルヴァ・ヴェーダ」` | 原名缺失「ェ」显示为 `「アタルヴァ・ヴ#ーダ」`；`4901` 抓取与 `4902` 莲华船终结特效验证 | 向 `spell_font.bmp` 注入「ェ」字模；保持 `hijiri.nut` 原版纯正性；实机验证 `4900 -> 4901 -> 4902` 完整连段 | **6324** (51 Hits) | 100% 原版名无 `#` | 正常 (motion 19) |
 | **古明地恋 (`koishi`)** | `「ブランブリーローズガーデン」` | `koishi.csv` 曾被改为其他名称 | 恢复 TH13.5 原版字节码名称 `「ブランブリーローズガーデン」`（原生字库已含全部假名），空中线绳与金色巨型蔷薇连续绽放 | **6855** | 100% 原版名无 `#` | 正常 (motion 0) |
@@ -177,6 +177,56 @@
    - 原版 `spell_font.bmp` 采用无衬线黑体（Gothic/Hei）字形，而 `font_texture_outline24.bmp` 为明朝体/衬线体；
    - 使用系统黑体 `C:\Windows\Fonts\simhei.ttf` 拟合原版 `spell_font.bmp` 单通道软掩码参数（`SIZE=23, BASE_Y=27, A=0.60, B=1.80, SIGMA=1.60, GAIN=0.80`，字芯峰值 `254` + 高斯柔化描边光晕），将 20 个缺失字模写入 `spell_font.bmp` 第 1 行空白区（`y=27, x=1222..1352, ch=0..3`），重排生成包含 531 个字模的有序尾部表；
    - 注意：`data/script/font.nut` 在游戏进程启动极早期即加载 `data/font/spell_font.bmp`，因此 [`game_session.py`](file:///d:/programme/155rl/scripts/game_session.py) 在拉起 `th155.exe` 后 0.6s 自动调用 `apply_koishi514_mod.py` 将 Pak 红黑树节点覆写为磁盘直读，确保新字库在初始化前生效。
+
+---
+
+### 3.6 秦心「仮面喪心舞　暗黒能楽」：结尾 TH13.5 立绘还原与黑白剪影图层遮挡修复（2026-11-10）
+
+1. **结尾缺失 TH13.5 专属立绘特写**：
+   - **根因**：TH13.5 原版 `kokoro.pat` `Motion 7900 Take 3` 引用的特写贴图为 `texture\climaxCut.dds`（DXT5 压缩格式），在 TH15.5 下直接加载 DDS 导致纹理失效或被跳过。
+   - **修复**：将 `climaxCut.dds` 无损解码并保存为 `texture\climaxCut.png`（同时放置在 `actor/kokoro/` 根目录与 `texture/` 目录），在 `patch_all_9_pats.py` 中自动将 `texture\climaxcut.dds` 重映射至 `texture\climaxCut.png`，并在 `kokoro.nut` / `kokoro_shot.nut` 中完整还原 `Climax_Cut` 结尾特写生成与退场流程。
+2. **黑白剪影阶段对面像素小人被白色水墨色块遮挡**：
+   - **根因**：
+     - TH13.5 原版水墨笔触贴图 `texture\effect00.png` ~ `effect06.png` 是白底黑墨灰度图（原版通过乘法正片叠底混合 `blend=2` 过滤白底，但在转换过程中若混合模式退化为普通 Alpha 混合或底色 Alpha 恒为 `255`，白底就会变成不透明纯白矩形块盖住角色）；
+     - 同时在黑白剪影阶段，水墨特效与背景遮罩的 `DrawActorPriority` 渲染优先级高于受击角色与秦心本体，导致像素小人被压在白色色块下方。
+   - **修复**：
+     - 将 `kokoro/texture/effect00..06.png` 转换为带精确墨迹 Alpha 透明通道的 PNG 贴图（去除不透明白底）；
+     - 校准 `kokoro_shot.nut` 中剪影背景与水墨特效的渲染层级（`DrawActorPriority(180)` 位于角色层 `190/200` 之下），使秦心与受击方黑色像素剪影清晰浮现于白色幕布之上。
+
+---
+
+### 3.7 丰聪耳神子「承詔必謹」：阶段二瞬移时序还原与像素小人动态斗篷状态映射（2026-11-10）
+
+1. **板边打空与两阶段瞬移时序还原（严格遵循 TH13.5 原版逻辑）**：
+   - **问题表现**：
+     - 最初移植版本未包含神子瞬移逻辑，导致神子在板边释放终符时巨剑仍劈向板中（`x=640`）打空；
+     - 初次加入瞬移时若写在阶段一（`Spell_Climax_Init` 或 `Spell_Climax_Cut`），会导致神子刚按出大招、立绘尚未播放前就提前瞬移。
+   - **还原方案（[`apply_clean_climax.py`](file:///d:/programme/155rl/.scratch/apply_clean_climax.py)）**：
+     - **阶段一（`Spell_Climax_Init` & `Spell_Climax_Cut`，`Motion 4900 Take 0..3`）**：100% 保持 TH13.5 原版代码，神子留在原地举剑、镜头拉近并播放 `Climax_Face` 立绘特写，**绝不提前传送**；
+     - **阶段二（`Spell_Climax_Finish`，`Motion 4900 Take 4`）**：在立绘特写播放完毕、切入最终挥剑斩击的瞬间，完整复用 TH13.5 `miko.nut` 原版 `SP_A_Init`（缩地瞬移）坐标计算与边界夹紧代码：
+       ```squirrel
+       this.flag1 = this.Vector3();
+       if (this.x < this.target.x)
+       {
+           this.flag1.x = this.target.x - 200.0;
+       }
+       else
+       {
+           this.flag1.x = this.target.x + 200.0;
+       }
+       this.flag1.y = this.target.y;
+       this.flag1.x = this.Math_MinMax(this.flag1.x, 20, 1260);
+       this.Warp(this.flag1.x, this.flag1.y);
+       ```
+       随后执行 `this.GetFront()` 面向对手，并在 `(this.x, 360.0)` 处生成 `this.Climax_Shot` 巨剑光柱，确保无论对手在左板边、右板边还是版中均 100% 满额命中（7872 伤害）。
+2. **像素小人斗篷颜色随当前状态动态变化（修复固定红袍问题）**：
+   - **根因**：
+     - 在 `miko_base.nut` 中，`SetMantType(type_)` 通过 `this.uv` 动态纹理层控制神子斗篷样式：默认状态（`style = 0`）为 `Motion 9901`（星空紫斗篷 `texture\mantletest000.bmp`），红袍状态（`style = 1`）为 `Motion 9902`（`texture\mantleHigh.png`），蓝袍状态（`style = 2`）为 `Motion 9900`（`texture\mantleLow.png`）；
+     - 神子角色像素图（`climax0000.bmp` ~ `climax00130.bmp`）在调色板中将斗篷区域涂为纯红遮罩底色。在 TH13.5 (`ver=13`) `.pat` 中，34 字节 Sprite 记录末尾字节 `uv_mode = 2` 指示启用 `this.uv` 映射，转换至 TH15.5 (`ver=17`) `.pat` 时对应图层头必须为 **`l_type = 128` (`0x80`), `l_blend = (1, 1, 2, 0)`**；
+     - 此前 [`patch_all_9_pats.py`](file:///d:/programme/155rl/.scratch/patch_all_9_pats.py) 的 `pack_v17_take` 将 `Motion 4900` 图层头硬编码为 `l_type = 0, l_blend = (1, 1, 0, 0)`，丢失了 `this.uv` 映射标志，导致直接裸露调色板底层的纯红遮罩色。
+   - **修复与验证**：
+     - 在 [`audit_135_vs_155_exact.py`](file:///d:/programme/155rl/.scratch/audit_135_vs_155_exact.py) 的 `parse_pat_v13` 中保留 `uv_mode` 字段，并在 [`patch_all_9_pats.py`](file:///d:/programme/155rl/.scratch/patch_all_9_pats.py) 的 `pack_v17_take` 中对 `uv_mode == 2` 且非加色混合的图层写入 `l_type = 128, l_blend = (1, 1, 2, 0)`；
+     - 经 [`verify_miko_cape.py`](file:///d:/programme/155rl/.scratch/verify_miko_cape.py) 实机验证，神子在默认状态（星空紫斗篷）、怪奇蓝斗篷状态（`style = 2`）与怪奇红斗篷状态（`style = 1`）下释放 LastWord 时，像素小人斗篷均随当前状态实时动态渲染。
 
 ---
 
