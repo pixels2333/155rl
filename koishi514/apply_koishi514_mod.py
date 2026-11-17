@@ -96,24 +96,30 @@ class MODULEENTRY32(ctypes.Structure):
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
 
-def find_th155_process():
+def find_all_th155_processes() -> list[int]:
     snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
     if snap == ctypes.c_void_p(-1).value:
         raise RuntimeError("CreateToolhelp32Snapshot failed")
+    pids: list[int] = []
     try:
         pe = PROCESSENTRY32()
         pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
         if not kernel32.Process32First(snap, ctypes.byref(pe)):
-            return None
+            return pids
         while True:
             exe_name = pe.szExeFile.decode("mbcs", errors="ignore").lower()
             if exe_name == "th155.exe":
-                return pe.th32ProcessID
+                pids.append(int(pe.th32ProcessID))
             if not kernel32.Process32Next(snap, ctypes.byref(pe)):
                 break
     finally:
         kernel32.CloseHandle(snap)
-    return None
+    return pids
+
+
+def find_th155_process():
+    pids = find_all_th155_processes()
+    return pids[-1] if pids else None
 
 
 def get_module_info(pid: int):
@@ -230,8 +236,8 @@ def apply_pak_override(restore=False, game_dir_override=None, sync_only=False):
         sync_mod_files(mod_root, default_game_dir)
         return 0
 
-    pid = find_th155_process()
-    if not pid:
+    pids = find_all_th155_processes()
+    if not pids:
         if os.path.isdir(default_game_dir):
             sync_mod_files(mod_root, default_game_dir)
             exe_candidate = os.path.join(default_game_dir, "th155.exe")
@@ -248,66 +254,73 @@ def apply_pak_override(restore=False, game_dir_override=None, sync_only=False):
                 )
                 for _ in range(30):
                     time.sleep(0.5)
-                    pid = find_th155_process()
-                    if pid:
-                        time.sleep(0.3)
+                    pids = find_all_th155_processes()
+                    if pids:
+                        time.sleep(0.6)
+                        pids = find_all_th155_processes()
                         break
-        if not pid:
+        if not pids:
             print("[!] 未检测到运行中的 th155.exe 进程！")
             return 1
 
-    base_addr, exe_path = get_module_info(pid)
-    if not base_addr:
-        print(f"[!] 无法获取 th155.exe (PID={pid}) 模块基址。")
-        return 1
+    rel_files = get_mod_files(mod_root)
+    synced = False
+    patched_any = False
 
-    game_dir = game_dir_override or os.path.dirname(exe_path)
-    print(f"[*] 已连接 th155.exe (PID={pid}, ImageBase=0x{base_addr:08X})")
-    print(f"[*] 游戏目录: {game_dir}")
-    if not restore:
-        sync_mod_files(mod_root, game_dir)
+    for pid in pids:
+        base_addr, exe_path = get_module_info(pid)
+        if not base_addr:
+            continue
+        game_dir = game_dir_override or os.path.dirname(exe_path)
+        if not restore and not synced:
+            sync_mod_files(mod_root, game_dir)
+            synced = True
 
-    hproc = kernel32.OpenProcess(
-        PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION,
-        False,
-        pid,
-    )
-    if not hproc:
-        raise RuntimeError("OpenProcess failed")
-    try:
-        import time
-        pkg_mgr = 0
-        for _ in range(40):
-            pkg_mgr = read_u32(hproc, base_addr + RVA_PACKAGE_MANAGER)
-            if pkg_mgr and read_u32(hproc, pkg_mgr + 0x24) > 1000:
-                break
-            time.sleep(0.25)
-        if not pkg_mgr:
-            raise RuntimeError("g_PackageManager 未就绪")
-        head_ptr = read_u32(hproc, pkg_mgr + 0x20)
-        gate_addr = base_addr + RVA_GATE_CHECK
-        cur_gate = read_mem(hproc, gate_addr, 5)
-        target_gate = GATE_ORIG_BYTES if restore else GATE_PATCH_BYTES
-        write_code_mem(hproc, gate_addr, target_gate)
-        new_gate = read_mem(hproc, gate_addr, 5)
-        print(f"[*] GateCheck (0x{gate_addr:08X}): {cur_gate.hex()} -> {new_gate.hex()}")
-
-        rel_files = get_mod_files(mod_root)
-        for rel_path in rel_files:
-            h = th155_pak_hash(rel_path)
-            node, cur_key = find_rbtree_node_by_hash_or_path(hproc, head_ptr, h, rel_path)
-            if not node:
-                print(f"    [*] {rel_path:<48} | 新增磁盘文件 (不在原版 Pak 树中)")
+        hproc = kernel32.OpenProcess(
+            PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION,
+            False,
+            pid,
+        )
+        if not hproc:
+            continue
+        try:
+            import time
+            pkg_mgr = 0
+            for _ in range(24):
+                try:
+                    pkg_mgr = read_u32(hproc, base_addr + RVA_PACKAGE_MANAGER)
+                    if pkg_mgr and read_u32(hproc, pkg_mgr + 0x24) > 1000:
+                        break
+                except Exception:
+                    pkg_mgr = 0
+                time.sleep(0.2)
+            if not pkg_mgr or read_u32(hproc, pkg_mgr + 0x24) <= 1000:
+                print(f"[*] 跳过空壳/未初始化实例 PID={pid}")
                 continue
-            desired_key = h if restore else (h ^ 1)
-            if cur_key != desired_key:
-                write_u32(hproc, node + 0x10, desired_key)
-            verify_key = read_u32(hproc, node + 0x10)
-            mode_str = "原版 Pak" if verify_key == h else "磁盘直读 (Mod 激活)"
-            print(f"    [+] {rel_path:<48} | Node=0x{node:08X} | Key=0x{verify_key:08X} ({mode_str})")
-    finally:
-        kernel32.CloseHandle(hproc)
-    return 0
+
+            print(f"[*] 已连接活跃游戏实例 th155.exe (PID={pid}, ImageBase=0x{base_addr:08X})")
+            head_ptr = read_u32(hproc, pkg_mgr + 0x20)
+            gate_addr = base_addr + RVA_GATE_CHECK
+            cur_gate = read_mem(hproc, gate_addr, 5)
+            target_gate = GATE_ORIG_BYTES if restore else GATE_PATCH_BYTES
+            write_code_mem(hproc, gate_addr, target_gate)
+            new_gate = read_mem(hproc, gate_addr, 5)
+            print(f"[*] GateCheck (0x{gate_addr:08X}): {cur_gate.hex()} -> {new_gate.hex()}")
+
+            for rel_path in rel_files:
+                h = th155_pak_hash(rel_path)
+                node, cur_key = find_rbtree_node_by_hash_or_path(hproc, head_ptr, h, rel_path)
+                if not node:
+                    continue
+                desired_key = h if restore else (h ^ 1)
+                if cur_key != desired_key:
+                    write_u32(hproc, node + 0x10, desired_key)
+            patched_any = True
+            print(f"[+] PID={pid} 已完成 {len(rel_files)} 个 Mod 文件挂载与 GateCheck 解锁")
+        finally:
+            kernel32.CloseHandle(hproc)
+
+    return 0 if patched_any else 1
 
 
 def main():

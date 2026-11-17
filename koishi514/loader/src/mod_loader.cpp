@@ -506,7 +506,21 @@ void InitModLoader(HMODULE hSelf) {
         Log("[Patch] GateCheck patched at 0x%08X to 'mov al, 1; ret 8'\n", gate_addr);
     }
 
-    // 7. Background watcher thread for PackageManager RbTree flip
+    // 7. Fix Matrix::Vec3Transform bug (RVA 0x0422A6)
+    // In th155.exe sub_4422A0:
+    // Original: 8D 45 F4 (lea eax, [ebp-0Ch]) - passes local stack var_C to sub_448A10,
+    // which was destroyed on return without copying back to pos argument [ebp+8].
+    // Fixed:    8B 45 08 (mov eax, [ebp+8])  - directly writes transformed Vector3 to pos argument!
+    uintptr_t vec3_addr = g_base + 0x0422A6;
+    uint8_t vec3_patch[3] = { 0x8B, 0x45, 0x08 };
+    if (VirtualProtect((void*)vec3_addr, sizeof(vec3_patch), PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        memcpy((void*)vec3_addr, vec3_patch, sizeof(vec3_patch));
+        VirtualProtect((void*)vec3_addr, sizeof(vec3_patch), oldProtect, &oldProtect);
+        FlushInstructionCache(GetCurrentProcess(), (void*)vec3_addr, sizeof(vec3_patch));
+        Log("[Patch] Matrix::Vec3Transform fixed at 0x%08X to 'mov eax, [ebp+8]'\n", vec3_addr);
+    }
+
+    // 8. Background watcher thread for PackageManager RbTree flip
     HANDLE hThread = CreateThread(NULL, 0, RbTreeWatchThread, NULL, 0, NULL);
     if (hThread) {
         CloseHandle(hThread);

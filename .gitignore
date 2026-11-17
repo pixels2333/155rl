@@ -21,11 +21,20 @@ CMakeCache.txt
 cmake_install.cmake
 Makefile
 *.vcxproj.user
+*.vcxproj
+*.vcxproj.filters
+*.sln
 
 # Loader intermediate build outputs
 koishi514/loader/build/
+koishi514/loader/build_vs/
+build_vs/
 koishi514/release/
 release/
+
+# Exported thcrap patch asset duplicates (generated from mods/; keep metadata & binhacks)
+thcrap_patches/*/data/
+thcrap_patches/*/th155/
 
 
 # ==============================================================================

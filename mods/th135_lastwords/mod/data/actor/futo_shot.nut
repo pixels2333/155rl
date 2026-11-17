@@ -3402,13 +3402,6 @@ function Climax_RollFire( t )
 		if (this.owner.motion == 4900 && this.owner.keyTake <= 3)
 		{
 			this.Warp(this.owner.x, this.owner.y);
-			// futo_rollFire.bmb: Z spin 3 deg/frame CCW on screen; engine mirrors rz with direction
-			this.rz -= 3.0 * 0.01745329;
-			this.count++;
-			if (this.count % 2 == 0)
-			{
-				this.owner.SetFreeObject(this.x + 20 - this.rand() % 40, this.y + 20 - this.rand() % 40, this.direction, this.owner.Climax_Shot_Trail, {});
-			}
 			this.HitCycleUpdate(12);
 		}
 		else
@@ -3428,9 +3421,35 @@ function Climax_Fire( t )
 	this.target = this.owner.target.weakref();
 	this.SetMotion(7900, 0);
 	this.DrawActorPriority(210);
+	local zs_x_ = (::camera.zoom > 0.05) ? (1.0 / ::camera.zoom) : 1.0;
+	local zs_y_ = (::camera.zoom > 0.05) ? (1.25 / ::camera.zoom) : 1.25;
+	this.Warp((::camera.camera2d.left + ::camera.camera2d.right) * 0.5, ::camera.camera2d.bottom);
+	this.sx = zs_x_;
+	this.sy = zs_y_;
 	this.stateLabel = function ()
 	{
+		if (this.owner && this.owner.target)
+		{
+			this.target = this.owner.target.weakref();
+		}
+		local zs2_x_ = (::camera.zoom > 0.05) ? (1.0 / ::camera.zoom) : 1.0;
+		local zs2_y_ = (::camera.zoom > 0.05) ? (1.25 / ::camera.zoom) : 1.25;
+		this.Warp((::camera.camera2d.left + ::camera.camera2d.right) * 0.5, ::camera.camera2d.bottom);
+		this.sx = zs2_x_;
+		this.sy = zs2_y_;
 		this.count++;
+		if (this.owner.motion == 4900 && this.owner.keyTake == 0)
+		{
+			this.stateLabel = function ()
+			{
+				this.alpha -= 0.05;
+				this.sy -= 0.01;
+				if (this.alpha <= 0.0)
+				{
+					this.ReleaseActor();
+				}
+			};
+		}
 		if (this.count % 120 == 1)
 		{
 			this.PlaySE(1953);
@@ -3452,35 +3471,16 @@ function Climax_Fire( t )
 				}
 			}
 		}
-		if (this.count % 2 == 0)
-		{
-			local base_x_ = (this.owner.x - 640).tointeger();
-			local base_y_ = (this.owner.centerY + 220).tointeger();
-			local bottom_ = (::battle.scroll_bottom).tointeger();
-			for (local fi = 0; fi < 4; fi++)
-			{
-				local fx_ = base_x_ + this.rand() % 1280;
-				local fy_ = base_y_ + this.rand() % 80;
-				this.owner.SetFreeObject(fx_, fy_, this.direction, this.owner.Climax_Shot_Trail, { floor_fire = true });
-			}
-			local fx2_ = base_x_ + this.rand() % 1280;
-			local fy2_ = base_y_ + this.rand() % 60;
-			this.owner.SetFreeObject(fx2_, fy2_, this.direction, this.owner.Climax_Shot_TrailB, { floor_fire = true });
-
-			local fx3_ = base_x_ + this.rand() % 1280;
-			local fy3_ = bottom_ - this.rand() % 60;
-			this.owner.SetFreeObject(fx3_, fy3_, this.direction, this.owner.Climax_Shot_Trail, { floor_fire = true });
-		}
 		if (this.count % 10 == 0)
 		{
 			local t_ = this.target.centerY - 300 - this.target.y;
 			if (t_ <= 0.0)
 			{
-				local dam_ = (25 + 100 * -t_ / 300).tointeger();
-				local i = 4;
+				local dam_ = (20 + 100 * -t_ / 300).tointeger();
+				local i = 2;
 				if (dam_ >= 50)
 				{
-					i = 7;
+					i = 6;
 				}
 				if (dam_ >= 100)
 				{
@@ -3513,7 +3513,7 @@ function Climax_Fire( t )
 				while( i > 0 )
 				{
 					i--;
-					this.owner.SetFreeObject(this.target.x + 35 - this.rand() % 70, this.target.y + 75 - this.rand() % 150, this.direction, this.owner.Climax_Shot_Trail, { floor_fire = true });
+					this.owner.SetFreeObject(this.target.x + 25 - this.rand() % 50, this.target.y + 75 - this.rand() % 150, this.direction, this.owner.Climax_Shot_Trail, {});
 				}
 			}
 		}
@@ -3548,7 +3548,7 @@ function Climax_Shot( t )
 	this.SetSpeed_Vec(t.vec, t.rot, this.direction);
 	this.stateLabel = function ()
 	{
-		this.owner.SetFreeObject(this.x - 25 * this.rand() % 50, this.y + 25 - this.rand() % 50, this.direction, this.owner.Climax_Shot_Trail, {});
+		this.owner.SetFreeObject(this.x - 25 + this.rand() % 50, this.y + 25 - this.rand() % 50, this.direction, this.owner.Climax_Shot_Trail, {});
 		this.owner.SetFreeObject(this.x, this.y, this.direction, this.owner.Climax_Shot_TrailB, {});
 		if (this.cancelCount <= 0 || this.hitCount > 0 || this.IsScreen(200.0))
 		{
@@ -3565,51 +3565,25 @@ function Climax_Shot_Trail( t )
 		this.owner = this.owner.owner;
 	}
 	this.SetMotion(7902, 4 + this.rand() % 4);
-	if ("floor_fire" in t)
+	this.DrawActorPriority(205);
+	this.sy = 0.34999999 + this.rand() % 25 * 0.01;
+	this.sx = 0.34999999 + this.rand() % 25 * 0.01;
+	this.rz = this.rand() % 360 * 0.01745329;
+	this.flag1 = (-8.0 + this.rand() % 17) * 0.01745329;
+	this.stateLabel = function ()
 	{
-		this.DrawActorPriority(215);
-		this.EnableTimeStop(false);
-		this.sx = 2.2 + (this.rand() % 18) * 0.1;
-		this.sy = this.sx;
-		this.SetSpeed_XY((-10 + this.rand() % 21) * 0.1, -3.5 - (this.rand() % 35) * 0.1);
-		this.rz = this.rand() % 360 * 0.01745329;
-		this.flag1 = (-8.0 + this.rand() % 17) * 0.01745329;
-		this.stateLabel = function ()
+		this.AddSpeed_XY(0.0, -0.5);
+		this.sy *= 0.92000002;
+		this.sx = this.sy;
+		this.rz += this.flag1;
+		this.blue -= 0.05;
+		this.green = this.blue;
+		this.alpha = this.blue;
+		if (this.alpha <= 0.0)
 		{
-			this.AddSpeed_XY(0.0, -0.15);
-			this.sy *= 0.97;
-			this.sx = this.sy;
-			this.rz += this.flag1;
-			this.blue -= 0.025;
-			this.green = this.blue * 0.7;
-			this.alpha = this.blue;
-			if (this.alpha <= 0.0)
-			{
-				this.ReleaseActor();
-			}
-		};
-	}
-	else
-	{
-		this.sy = 0.34999999 + this.rand() % 25 * 0.01;
-		this.sx = 0.34999999 + this.rand() % 25 * 0.01;
-		this.rz = this.rand() % 360 * 0.01745329;
-		this.flag1 = (-8.0 + this.rand() % 17) * 0.01745329;
-		this.stateLabel = function ()
-		{
-			this.AddSpeed_XY(0.0, -0.5);
-			this.sy *= 0.92000002;
-			this.sx = this.sy;
-			this.rz += this.flag1;
-			this.blue -= 0.05;
-			this.green = this.blue;
-			this.alpha = this.blue;
-			if (this.alpha <= 0.0)
-			{
-				this.ReleaseActor();
-			}
-		};
-	}
+			this.ReleaseActor();
+		}
+	};
 }
 
 function Climax_Shot_TrailB( t )
@@ -3619,42 +3593,18 @@ function Climax_Shot_TrailB( t )
 		this.owner = this.owner.owner;
 	}
 	this.SetMotion(7902, 1);
-	if ("floor_fire" in t)
+	this.stateLabel = function ()
 	{
-		this.DrawActorPriority(215);
-		this.EnableTimeStop(false);
-		this.sx = 2.4 + (this.rand() % 12) * 0.1;
-		this.sy = this.sx;
-		this.SetSpeed_XY((-8 + this.rand() % 17) * 0.1, -2.5 - (this.rand() % 25) * 0.1);
-		this.stateLabel = function ()
+		this.sy *= 0.89999998;
+		this.sx = this.sy;
+		this.blue -= 0.075;
+		this.green = this.blue;
+		this.alpha = this.blue;
+		if (this.alpha <= 0.0)
 		{
-			this.AddSpeed_XY(0.0, -0.1);
-			this.sy *= 0.96;
-			this.sx = this.sy;
-			this.blue -= 0.03;
-			this.green = this.blue * 0.8;
-			this.alpha = this.blue;
-			if (this.alpha <= 0.0)
-			{
-				this.ReleaseActor();
-			}
-		};
-	}
-	else
-	{
-		this.stateLabel = function ()
-		{
-			this.sy *= 0.89999998;
-			this.sx = this.sy;
-			this.blue -= 0.075;
-			this.green = this.blue;
-			this.alpha = this.blue;
-			if (this.alpha <= 0.0)
-			{
-				this.ReleaseActor();
-			}
-		};
-	}
+			this.ReleaseActor();
+		}
+	};
 }
 
 function Climax_FirePilar( t )

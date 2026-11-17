@@ -3017,7 +3017,7 @@ function Spell_Climax_Finish( t )
 	this.HitReset();
 	this.SetTimeStop(1);
 	this.SetMotion(4900, 4);
-	this.SetFreeObject(640, this.centerY + 260, this.direction, this.Climax_Fire, {});
+	this.SetFreeObject(640, ::camera.camera2d.bottom, this.direction, this.Climax_Fire, {});
 	if (this.flag1)
 	{
 		this.flag1.func();
